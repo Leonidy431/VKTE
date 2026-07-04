@@ -14,6 +14,13 @@
 - [`plc/`](plc/prompt_for_claude.md) — готовый промт для Claude:
   список устройств и техзадание на программу ПЛК (Structured Text,
   OpenPLC), реализующую интерлок зажигания и опрос телеметрии.
+- [`powerline/`](powerline/powerline_comm.md) — мост PLC (Power Line
+  Communication) Ethernet <-> бортовая сеть 12В, для передачи данных
+  без прокладки отдельного кабеля. Не путать с `plc/` (там PLC —
+  Programmable Logic Controller).
+- [`purchasing/`](purchasing/ozon_shopping_list.md) — консолидированный
+  список покупок для Ozon/AliExpress по всем модулям с поисковыми
+  запросами и техническими требованиями.
 
 Все модули рассчитаны на совместную работу в одном автомобиле: линия
 телеметрии (RS-485, витая пара) прокладывается отдельно от проводки
