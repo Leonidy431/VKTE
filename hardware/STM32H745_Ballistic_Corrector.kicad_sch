@@ -1,0 +1,219 @@
+(kicad_sch (version 20230121)
+
+  (uuid "a1b2c3d4-e5f6-7890-abcd-ef1234567890")
+  (paper "A2")
+  (title_block
+    (title "STM32H745 Ballistic Corrector System")
+    (date "2026-07-28")
+    (rev "1.0")
+    (company "Ballistic Systems")
+    (comment 1 "Dual-core real-time ballistic analysis testbench")
+    (comment 2 "M7 @ 480 MHz: Sensor fusion, Kalman filtering")
+    (comment 3 "M4 @ 240 MHz: Logging, UI, communication")
+    (comment 4 "Production-grade embedded system for ammunition profiling")
+  )
+
+  (sheets
+    (sheet 1 "a1b2c3d4-e5f6-7890-abcd-ef1234567890" "STM32H745 Dual-Core MCU")
+    (sheet 2 "b2c3d4e5-f6a7-8901-bcde-f12345678901" "Power Distribution & Management")
+    (sheet 3 "c3d4e5f6-a7b8-9012-cdef-123456789012" "Sensor Interface: IMU, LRF, Thermal")
+    (sheet 4 "d4e5f6a7-b8c9-0123-def0-123456789abc" "External Memory: QSPI Flash & EEPROM")
+    (sheet 5 "e5f6a7b8-c9d0-1234-ef01-23456789abcd" "Communication: UART, USB HS, Bluetooth LE")
+    (sheet 6 "f6a7b8c9-d0e1-2345-f012-3456789abcde" "Clock, Reset, Watchdog, Protection")
+  )
+
+  (symbol_instances
+    (path "/" (reference "U1") (unit 1) (value "STM32H745ZIT6"))
+    (path "/" (reference "U2") (unit 1) (value "TPS62133ADBVT") (datasheet "https://www.ti.com/lit/ds/symlink/tps62133a.pdf"))
+    (path "/" (reference "U3") (unit 1) (value "LDO 3V3_500mA"))
+    (path "/" (reference "U4") (unit 1) (value "ICM-20689") (datasheet "https://invensense.tdk.com/products/motion-tracking/9-axis/"))
+    (path "/" (reference "U5") (unit 1) (value "VL53L0X") (datasheet "https://www.st.com/resource/en/datasheet/vl53l0x.pdf"))
+    (path "/" (reference "U6") (unit 1) (value "W25Q128JV") (datasheet "https://www.winbond.com/hq/product/code-storage-flash-memory/"))
+    (path "/" (reference "U7") (unit 1) (value "AT24C256C") (datasheet "https://ww1.microchip.com/downloads/en/DeviceDoc/doc0670.pdf"))
+    (path "/" (reference "U8") (unit 1) (value "CP2102N") (datasheet "https://www.silabs.com/documents/public/data-sheets/cp2102n-datasheet.pdf"))
+    (path "/" (reference "U9") (unit 1) (value "BT121-A"))
+    (path "/" (reference "U10") (unit 1) (value "MCP9808") (datasheet "https://ww1.microchip.com/downloads/en/DeviceDoc/25095A.pdf"))
+    (path "/" (reference "U11") (unit 1) (value "BMP390"))
+    (path "/" (reference "C1") (unit 1) (value "100nF"))
+    (path "/" (reference "C2") (unit 1) (value "10uF"))
+    (path "/" (reference "R1") (unit 1) (value "10k"))
+    (path "/" (reference "D1") (unit 1) (value "Schottky 1N5819"))
+    (path "/" (reference "L1") (unit 1) (value "4.7uH"))
+    (path "/" (reference "SW1") (unit 1) (value "Boot0 Switch"))
+    (path "/" (reference "J1") (unit 1) (value "USB HS Mini-B"))
+    (path "/" (reference "J2") (unit 1) (value "UART Debug (FTDI)"))
+    (path "/" (reference "J3") (unit 1) (value "SWD Debug (10-pin)"))
+    (path "/" (reference "J4") (unit 1) (value "Sensor Connector (14-pin)"))
+  )
+
+  (wire
+    (pts (xy 200 100) (xy 300 100))
+    (stroke (width 0) (type solid) (color 0 0 0 0))
+    (uuid "line-vcc-1")
+  )
+
+  (global_label "VCC_12V" (shape input) (at 50 100 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify left))
+    (uuid "gnd-vcc-main")
+  )
+
+  (global_label "GND" (shape ground) (at 50 200 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify left))
+    (uuid "gnd-main")
+  )
+
+  (global_label "VCC_3V3" (shape output) (at 400 100 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify right))
+    (uuid "vcc-3v3-output")
+  )
+
+  (global_label "VCC_1V8" (shape output) (at 400 150 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify right))
+    (uuid "vcc-1v8-output")
+  )
+
+  (global_label "SPI1_CLK" (shape output) (at 600 100 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify right))
+    (uuid "spi1-clk")
+  )
+
+  (global_label "SPI1_MOSI" (shape output) (at 600 120 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify right))
+    (uuid "spi1-mosi")
+  )
+
+  (global_label "SPI1_MISO" (shape input) (at 600 140 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify right))
+    (uuid "spi1-miso")
+  )
+
+  (global_label "SPI1_CS_IMU" (shape output) (at 600 160 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify right))
+    (uuid "spi1-cs-imu")
+  )
+
+  (global_label "QSPI_CLK" (shape output) (at 600 200 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify right))
+    (uuid "qspi-clk")
+  )
+
+  (global_label "QSPI_D0" (shape io) (at 600 220 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify right))
+    (uuid "qspi-d0")
+  )
+
+  (global_label "QSPI_D1" (shape io) (at 600 240 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify right))
+    (uuid "qspi-d1")
+  )
+
+  (global_label "QSPI_D2" (shape io) (at 600 260 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify right))
+    (uuid "qspi-d2")
+  )
+
+  (global_label "QSPI_D3" (shape io) (at 600 280 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify right))
+    (uuid "qspi-d3")
+  )
+
+  (global_label "QSPI_CS" (shape output) (at 600 300 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify right))
+    (uuid "qspi-cs")
+  )
+
+  (global_label "I2C1_SCL" (shape open_collector) (at 650 100 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify right))
+    (uuid "i2c1-scl")
+  )
+
+  (global_label "I2C1_SDA" (shape open_collector) (at 650 120 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify right))
+    (uuid "i2c1-sda")
+  )
+
+  (global_label "UART2_TX" (shape output) (at 700 100 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify right))
+    (uuid "uart2-tx")
+  )
+
+  (global_label "UART2_RX" (shape input) (at 700 120 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify right))
+    (uuid "uart2-rx")
+  )
+
+  (global_label "USB_DP" (shape io) (at 750 100 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify right))
+    (uuid "usb-dp")
+  )
+
+  (global_label "USB_DM" (shape io) (at 750 120 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify right))
+    (uuid "usb-dm")
+  )
+
+  (global_label "NRST" (shape input) (at 200 50 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify left))
+    (uuid "nrst-signal")
+  )
+
+  (global_label "BOOT0" (shape input) (at 200 70 0)
+    (effects (font (size 1.27 1.27) (thickness 0.15)) (justify left))
+    (uuid "boot0-signal")
+  )
+
+  (text "STM32H745ZIT6 Dual-Core ARM Cortex-M7/M4\n- M7: 480 MHz, 1 MB ITCM + 128 KB DTCM\n- M4: 240 MHz, 64 KB ITCM + 128 KB DTCM\n- 2 MB internal Flash (1 MB per core)\n- 2 MB AXI-SRAM + CCM\n- Quad-SPI, Dual I2C, UART, USB HS, CAN\n- Temperature range: -40 to +85 °C" (at 150 350 0)
+    (effects (font (size 1 1) (thickness 0.15)) (justify left))
+    (uuid "mcu-annotation")
+  )
+
+  (text "Power Distribution:\n- Input: 12V via barrel connector (1A max)\n- TPS62133A buck converter: 12V → 5V/1A\n- LDO 1: 5V → 3.3V/500mA (digital)\n- LDO 2: 5V → 1.8V/200mA (IO bank)\n- All supplies decoupled with 100nF ceramic + 10µF electrolytics\n- Reverse polarity protection via Schottky diode" (at 150 420 0)
+    (effects (font (size 1 1) (thickness 0.15)) (justify left))
+    (uuid "power-annotation")
+  )
+
+  (text "Sensor Interfaces:\n- SPI1: ICM-20689 9-axis IMU (1 kHz sampling)\n  Clock: 10 MHz, CS on PB0\n- I2C1: VL53L0X laser rangefinder (50 Hz)\n- I2C1: MCP9808 barrel temperature (1 Hz)\n- I2C1: BMP390 pressure/ambient temp (10 Hz)\n- All sensors use 3.3V IO, pull-ups on I2C lines (10k to VCC_3V3)\n- SPI termination: 50Ω series resistors on clock/data" (at 150 490 0)
+    (effects (font (size 1 1) (thickness 0.15)) (justify left))
+    (uuid "sensor-annotation")
+  )
+
+  (text "External Memory:\n- W25Q128JV QSPI Flash: 16 MB (108 MHz)\n  Quad mode: D0, D1, D2, D3 for 4x throughput\n  CS on PA3, clock on PB2\n  Stores all ballistic session logs\n- AT24C256C I2C EEPROM: 32 KB\n  Stores configuration, calibration, firmware backup\n  Addr: 0xA0-0xAF (write-protect pin grounded)" (at 150 560 0)
+    (effects (font (size 1 1) (thickness 0.15)) (justify left))
+    (uuid "memory-annotation")
+  )
+
+  (text "Communication:\n- UART2 (PA2/PA3): 921600 baud debug output\n  CP2102N USB-UART bridge for host connectivity\n- USB HS OTG: Configuration per requirements (TODO in v2.0)\n  DP on PA11, DM on PA12\n  Dual-role: device (log download) or host (accessory)\n- Bluetooth LE (TBD): BT121-A module on UART4\n  Mobile app integration (future roadmap v1.5+)" (at 150 630 0)
+    (effects (font (size 1 1) (thickness 0.15)) (justify left))
+    (uuid "comm-annotation")
+  )
+
+  (text "Clock & Reset:\n- HSE (High-Speed External): 8 MHz crystal + caps\n  PH0-OSC_IN, PH1-OSC_OUT\n- PLL1: 8 MHz × 60 = 480 MHz (M7 core clock)\n- PLL2: 8 MHz × 60 = 480 MHz (M4 core clock, div by 2)\n- Reset circuit: capacitive filtering on NRST\n- Watchdog: Independent WDG + software monitor\n  Timeout: 5 seconds (tunable in firmware)\n- BOOT0 switch for bootloader entry (factory reset)" (at 150 700 0)
+    (effects (font (size 1 1) (thickness 0.15)) (justify left))
+    (uuid "clock-annotation")
+  )
+
+  (text "Safety & Protection:\n- Schottky reverse-polarity diode on VCC_12V input\n- RC filter on NRST: 10k/100nF (debounce 1ms)\n- MPU (Memory Protection Unit): Configured in firmware\n  - DTCM & AXI-SRAM: Write/execute-never for stack overflow\n  - Flash: Read-only after boot\n- CRC32 on all Flash packets (session logs)\n- Watchdog independent of software state\n  - Strobed by M7 sensor_fusion_task every 100ms\n  - Failure triggers NRST and halt (safe state)" (at 150 770 0)
+    (effects (font (size 1 1) (thickness 0.15)) (justify left))
+    (uuid "safety-annotation")
+  )
+
+  (text "Test Points & Debug:\n- SWD connector (10-pin ARM standard)\n  - SWDIO on PA13, SWDCLK on PA14\n  - Compatible with ST-Link v2/v3\n- UART2 exposed on 3-pin header (TX/RX/GND)\n- All power rails brought to multimeter test points\n- VCC_3V3, VCC_1V8, VREF, GND accessible\n- Current monitoring via series resistor (10 mΩ) in main rail" (at 150 840 0)
+    (effects (font (size 1 1) (thickness 0.15)) (justify left))
+    (uuid "test-annotation")
+  )
+
+  (text "PCB Layout Notes:\n- 4-layer: Signal, GND, VCC, Signal\n- 50Ω impedance control for QSPI traces (high-speed digital)\n- GND stitching via around all high-current areas\n- Decoupling capacitors placed <5mm from IC pins\n- Crystal load capacitors: 12pF (matching pair, 1%)\n- Via count: >4 per signal (fan-out from BGA)" (at 150 910 0)
+    (effects (font (size 1 1) (thickness 0.15)) (justify left))
+    (uuid "pcb-annotation")
+  )
+
+  (text "Assembly & Validation:\n- LQFP144 package: leads on 0.5mm pitch\n- Thermal pad (exposed pad) soldered for heat dissipation\n- Test program validates:\n  - Clock tree (verify PLL lock)\n  - Voltage rails (±5% at no load)\n  - SPI/I2C communication (loopback test)\n  - Flash read/write (CRC check)\n  - Watchdog firing (software trigger)\n- Production: AOI + X-ray for solder joint quality" (at 150 980 0)
+    (effects (font (size 1 1) (thickness 0.15)) (justify left))
+    (uuid "assembly-annotation")
+  )
+
+  (sheet_instances
+    (path "/" (page "1"))
+  )
+
+)
