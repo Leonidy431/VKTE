@@ -17,6 +17,7 @@ from typing import Optional
 from app.modules.volumetric.bubble_generator import BubbleGenerator
 from app.modules.volumetric.laser_controller import LaserController
 from app.modules.volumetric.volumetric_renderer import VolumetricRenderer
+from app.modules.volumetric.hud_renderer import HUDRenderer, HUDMode, TelemetryFrame
 from app.config import Settings
 
 logger = logging.getLogger(__name__)
@@ -26,12 +27,13 @@ settings = Settings()
 bubble_gen: Optional[BubbleGenerator] = None
 laser_ctrl: Optional[LaserController] = None
 renderer: Optional[VolumetricRenderer] = None
+hud_renderer: Optional[HUDRenderer] = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown logic for the application."""
-    global bubble_gen, laser_ctrl, renderer
+    global bubble_gen, laser_ctrl, renderer, hud_renderer
 
     logger.info("Initializing Volumetric Display subsystems...")
 
@@ -53,6 +55,11 @@ async def lifespan(app: FastAPI):
         renderer = VolumetricRenderer(
             grid_resolution=settings.VOXEL_RESOLUTION,
             frame_rate_fps=settings.FRAME_RATE,
+        )
+
+        hud_renderer = HUDRenderer(
+            mode=HUDMode.LAND,
+            brightness_percent=100.0,
         )
 
         logger.info("Subsystems initialized successfully.")
@@ -191,6 +198,96 @@ async def render_3d_object(object_type: str, scale: float = 1.0):
 
 
 # ============================================================================
+# HUD Control Endpoints
+# ============================================================================
+
+@app.post("/api/v1/hud/render")
+async def render_hud_frame(
+    speed_kmh: float = 0.0,
+    engine_temp_c: float = 20.0,
+    battery_voltage_v: float = 12.0,
+    engine_current_a: float = 0.0,
+    depth_m: float = 0.0,
+    water_temp_c: float = 15.0,
+    pressure_bar: float = 1.0,
+    salinity_ppt: float = 35.0,
+):
+    """
+    Render HUD frame with telemetry data.
+
+    Supports both Land (Volga automotive) and Marine (underwater) modes.
+    Returns metadata about the rendered frame.
+    """
+    if not hud_renderer:
+        raise HTTPException(status_code=503, detail="HUD renderer not initialized")
+
+    telemetry = TelemetryFrame(
+        speed_kmh=speed_kmh,
+        engine_temp_c=engine_temp_c,
+        battery_voltage_v=battery_voltage_v,
+        engine_current_a=engine_current_a,
+        depth_m=depth_m,
+        water_temp_c=water_temp_c,
+        pressure_bar=pressure_bar,
+        salinity_ppt=salinity_ppt,
+        mode=hud_renderer.mode,
+    )
+
+    result = hud_renderer.render_frame(telemetry)
+    return result
+
+
+@app.post("/api/v1/hud/mode")
+async def set_hud_mode(mode: str):
+    """
+    Set HUD operating mode: land, marine, debug, off
+
+    - land: Volga 2410 automotive display (speedometer, engine status, battery)
+    - marine: Underwater display (depth gauge, water temp, pressure, salinity)
+    - debug: Simulator display (all telemetry at once)
+    - off: Display off
+    """
+    if not hud_renderer:
+        raise HTTPException(status_code=503, detail="HUD renderer not initialized")
+
+    try:
+        hud_mode = HUDMode(mode.lower())
+        hud_renderer.set_mode(hud_mode)
+        return {"status": "hud_mode_set", "mode": hud_mode.value}
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid mode '{mode}'. Must be: land, marine, debug, off"
+        )
+
+
+@app.post("/api/v1/hud/brightness")
+async def set_hud_brightness(percent: float):
+    """Set HUD display brightness (0-100%)."""
+    if not hud_renderer:
+        raise HTTPException(status_code=503, detail="HUD renderer not initialized")
+
+    try:
+        hud_renderer.set_brightness(percent)
+        return {
+            "status": "hud_brightness_set",
+            "brightness_percent": percent,
+            "brightness_cd_m2": int(4000 * percent / 100),  # DLP TRP-4500 spec: 4000 cd/m²
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/api/v1/hud/status")
+async def get_hud_status():
+    """Get current HUD status."""
+    if not hud_renderer:
+        raise HTTPException(status_code=503, detail="HUD renderer not initialized")
+
+    return hud_renderer.get_status()
+
+
+# ============================================================================
 # WebSocket for Real-time Telemetry
 # ============================================================================
 
@@ -200,6 +297,7 @@ async def telemetry_websocket(websocket: WebSocket):
     WebSocket for streaming real-time telemetry:
     - Laser power, scan frequency, frame rate
     - Bubble density, resonant frequency, cavitation threshold
+    - HUD status (brightness, mode, frame count)
     - Temperature, system health
     """
     await websocket.accept()
@@ -208,11 +306,12 @@ async def telemetry_websocket(websocket: WebSocket):
     try:
         while True:
             # Send telemetry every 100ms
-            if all([bubble_gen, laser_ctrl, renderer]):
+            if all([bubble_gen, laser_ctrl, renderer, hud_renderer]):
                 telemetry = {
                     "laser": laser_ctrl.get_telemetry(),
                     "bubbles": bubble_gen.get_telemetry(),
                     "render": renderer.get_telemetry(),
+                    "hud": hud_renderer.get_status(),
                 }
                 await websocket.send_json(telemetry)
 
