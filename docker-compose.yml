@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+  # Volumetric Display Backend (FastAPI + mock hardware)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: volumetric-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=true
+      - MOCK_HARDWARE=true
+      - LOG_LEVEL=INFO
+      - LASER_WAVELENGTH=532
+      - LASER_POWER=8.0
+      - BUBBLE_FREQUENCY=40000
+      - BUBBLE_DUTY_CYCLE=0.5
+      - VOXEL_RESOLUTION=100
+      - FRAME_RATE=30
+    volumes:
+      - ./backend:/app
+      - /tmp/volumetric_display.log:/tmp/volumetric_display.log
+    command: >
+      sh -c "pip install -r requirements.txt &&
+             python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    networks:
+      - volumetric-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  # Frontend (React, optional for Phase 7)
+  frontend:
+    image: node:18-alpine
+    container_name: volumetric-frontend
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+    command: >
+      sh -c "npm install &&
+             npm start"
+    networks:
+      - volumetric-net
+    depends_on:
+      - backend
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000
+
+networks:
+  volumetric-net:
+    driver: bridge
