@@ -177,7 +177,7 @@
     (uuid "sensor-annotation")
   )
 
-  (text "External Memory:\n- W25Q128JV QSPI Flash: 16 MB (108 MHz)\n  Quad mode: D0, D1, D2, D3 for 4x throughput\n  CS on PA3, clock on PB2\n  Stores all ballistic session logs\n- AT24C256C I2C EEPROM: 32 KB\n  Stores configuration, calibration, firmware backup\n  Addr: 0xA0-0xAF (write-protect pin grounded)" (at 150 560 0)
+  (text "External Memory:\n- W25Q128JV QSPI Flash: 16 MB (108 MHz)\n  Quad mode: D0=PD11, D1=PD12, D2=PE2, D3=PD13\n  CS on PB6 (AF10), clock on PB2 (AF9)\n  NOTE rev1.0 fix: CS moved PA3->PB6 (PA3 = USART2_RX)\n  Stores all ballistic session logs\n- AT24C256C I2C EEPROM: 32 KB\n  Stores configuration, calibration, firmware backup\n  Addr: 0xA0-0xAF (write-protect pin grounded)" (at 150 560 0)
     (effects (font (size 1 1) (thickness 0.15)) (justify left))
     (uuid "memory-annotation")
   )
