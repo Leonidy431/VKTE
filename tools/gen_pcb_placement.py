@@ -78,18 +78,44 @@ def footprint(lib, ref, val, x, y, pads, body_w, body_h, desc="", th=False, rot=
 # Package generators (pads in footprint-local coordinates)
 # ---------------------------------------------------------------------------
 
-def lqfp144(ref):
+# STM32H745ZIT6 LQFP144 pin->net map (QSPI CS on PB6 per HLD fix).
+# Pin numbers follow the standard STM32 LQFP144 arrangement; VERIFY against
+# the STM32H745ZIT6 datasheet at netlist import (VCAP/analog pins left open).
+U1_NETS = {
+    1: "QSPI_D2",            # PE2 / QUADSPI_BK1_IO2
+    16: "GND", 17: "VCC_3V3",
+    25: "NRST",
+    36: "UART2_TX", 37: "UART2_RX",      # PA2 / PA3
+    38: "GND", 39: "VCC_3V3",
+    41: "SPI1_CLK", 42: "SPI1_MISO", 43: "SPI1_MOSI",  # PA5-PA7
+    46: "SPI1_CS_IMU",       # PB0
+    48: "QSPI_CLK",          # PB2
+    51: "GND", 52: "VCC_3V3", 61: "GND", 62: "VCC_3V3", 72: "VCC_3V3",
+    80: "QSPI_D0", 81: "QSPI_D1", 82: "QSPI_D3",       # PD11-PD13
+    83: "GND", 84: "VCC_3V3", 94: "GND", 95: "VCC_3V3",
+    103: "USB_DM", 104: "USB_DP",        # PA11 / PA12
+    107: "GND", 108: "VCC_3V3",
+    120: "GND", 121: "VCC_3V3", 130: "GND", 131: "VCC_3V3",
+    136: "QSPI_CS",          # PB6 / QUADSPI_BK1_NCS
+    138: "BOOT0",
+    139: "I2C1_SCL", 140: "I2C1_SDA",    # PB8 / PB9
+    143: "GND", 144: "VCC_3V3",
+}
+
+
+def lqfp144(ref, nets=None):
     D, pitch, n = 10.85, 0.5, 36
     span0 = -(n - 1) / 2 * pitch  # -8.75
+    nets = nets or {}
     pads = []
     for i in range(n):  # left, 1-36, top->bottom
-        pads.append(smd_pad(ref, 1 + i, -D, span0 + i * pitch, 1.5, 0.3))
+        pads.append(smd_pad(ref, 1 + i, -D, span0 + i * pitch, 1.5, 0.3, nets.get(1 + i)))
     for i in range(n):  # bottom, 37-72, left->right
-        pads.append(smd_pad(ref, 37 + i, span0 + i * pitch, D, 0.3, 1.5))
+        pads.append(smd_pad(ref, 37 + i, span0 + i * pitch, D, 0.3, 1.5, nets.get(37 + i)))
     for i in range(n):  # right, 73-108, bottom->top
-        pads.append(smd_pad(ref, 73 + i, D, -span0 - i * pitch, 1.5, 0.3))
+        pads.append(smd_pad(ref, 73 + i, D, -span0 - i * pitch, 1.5, 0.3, nets.get(73 + i)))
     for i in range(n):  # top, 109-144, right->left
-        pads.append(smd_pad(ref, 109 + i, -span0 - i * pitch, -D, 0.3, 1.5))
+        pads.append(smd_pad(ref, 109 + i, -span0 - i * pitch, -D, 0.3, 1.5, nets.get(109 + i)))
     return pads, 20, 20
 
 
@@ -289,7 +315,7 @@ def build_all():
         "100nF", 73.5, 79, "NRST debounce")
 
     # --- MCU zone (x 76-104) ------------------------------------------------
-    put(lqfp144("U1"), "Package_QFP:LQFP-144_20x20mm_P0.5mm", "U1",
+    put(lqfp144("U1", U1_NETS), "Package_QFP:LQFP-144_20x20mm_P0.5mm", "U1",
         "STM32H745ZIT6", 90, 78, "Dual-core MCU; nets bind on netlist import")
     put(xtal_3225("Y1"), "Crystal:Crystal_SMD_3225-4Pin", "Y1", "8MHz", 80, 92.5,
         "HSE crystal, <5mm to PH0/PH1, GND guard")
@@ -298,7 +324,7 @@ def build_all():
     put(chip2("C13", 0.51, 0.54, 0.64, None, "GND"), "Capacitor_SMD:C_0402", "C13",
         "12pF 1%", 83.5, 92.5, "HSE load cap")
     decap_pos = [("C3", 82, 65), ("C4", 90, 65), ("C5", 98, 65),
-                 ("C6", 103.6, 72), ("C7", 103.6, 84),
+                 ("C6", 103.6, 72), ("C7", 103.6, 86.6),
                  ("C8", 98, 91.5), ("C9", 76.5, 72), ("C10", 76.5, 84)]
     for ref, x, y in decap_pos:
         put(chip2(ref, 0.51, 0.54, 0.64, "VCC_3V3", "GND"), "Capacitor_SMD:C_0402",
