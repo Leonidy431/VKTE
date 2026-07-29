@@ -16,6 +16,9 @@ class Settings(BaseSettings):
     PORT: int = 8000
     DEBUG: bool = True
 
+    # Security (from environment or default)
+    API_KEY: str = "sk-vkte-dev-change-in-production"  # CHANGE THIS IN PRODUCTION
+
     # CORS
     CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8080"]
 

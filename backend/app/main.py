@@ -5,23 +5,72 @@ References:
 - VOLUMETRIC_DISPLAY_SPECIFICATION.md
 - docs/BUBBLE_TECHNOLOGY.md
 - docs/HARDWARE_BOM.md
+- ARCHITECTURE_AUDIT.md (security & validation)
 """
 
-from fastapi import FastAPI, HTTPException, WebSocket
+from fastapi import FastAPI, HTTPException, WebSocket, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthCredentials
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from contextlib import asynccontextmanager
 import logging
 import asyncio
+import os
 from typing import Optional
+import structlog
 
 from app.modules.volumetric.bubble_generator import BubbleGenerator
 from app.modules.volumetric.laser_controller import LaserController
 from app.modules.volumetric.volumetric_renderer import VolumetricRenderer
 from app.modules.volumetric.hud_renderer import HUDRenderer, HUDMode, TelemetryFrame
 from app.config import Settings
+from app.schemas import (
+    HUDRenderRequest, HUDModeRequest, HUDBrightnessRequest,
+    RenderObjectRequest, BubbleStartRequest, HealthResponse
+)
 
-logger = logging.getLogger(__name__)
+# Setup structured logging
+structlog.configure(
+    processors=[
+        structlog.stdlib.filter_by_level,
+        structlog.stdlib.add_logger_name,
+        structlog.stdlib.add_log_level,
+        structlog.stdlib.PositionalArgumentsFormatter(),
+        structlog.processors.TimeStamper(fmt="iso"),
+        structlog.processors.StackInfoRenderer(),
+        structlog.processors.format_exc_info,
+        structlog.processors.UnicodeDecoder(),
+        structlog.processors.JSONRenderer()
+    ],
+    context_class=dict,
+    logger_factory=structlog.stdlib.LoggerFactory(),
+    cache_logger_on_first_use=True,
+)
+
+logger = structlog.get_logger(__name__)
 settings = Settings()
+
+# Rate limiting (prevent DDoS)
+limiter = Limiter(key_func=get_remote_address)
+
+# API key authentication (from environment or hardcoded for demo)
+VALID_API_KEYS = {settings.get("API_KEY", "demo-key-change-in-production")}
+
+security = HTTPBearer()
+
+
+def verify_api_key(credentials: HTTPAuthCredentials = Depends(security)) -> str:
+    """Verify API key from Authorization header."""
+    if credentials.credentials not in VALID_API_KEYS:
+        logger.warning("invalid_api_key", key=credentials.credentials[:10])
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing API key",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return credentials.credentials
+
 
 # Global instances (initialized at startup)
 bubble_gen: Optional[BubbleGenerator] = None
@@ -82,9 +131,16 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Volumetric Display Control API",
     description="REST + WebSocket API for laser+bubble volumetric rendering",
-    version="0.1.0",
+    version="0.2.0",  # Updated with audit fixes
     lifespan=lifespan,
 )
+
+# Add rate limiter
+app.state.limiter = limiter
+app.add_exception_handler(limiter.RateLimitExceeded, lambda r, e: HTTPException(
+    status_code=429,
+    detail="Rate limit exceeded"
+))
 
 # CORS configuration
 app.add_middleware(
@@ -101,9 +157,11 @@ app.add_middleware(
 # ============================================================================
 
 @app.get("/health")
-async def health_check():
-    """Basic health check endpoint."""
-    return {"status": "healthy"}
+@limiter.limit("100/minute")
+async def health_check(request):
+    """Basic health check endpoint (no auth required)."""
+    logger.info("health_check")
+    return HealthResponse()
 
 
 @app.get("/api/v1/status")
@@ -125,17 +183,32 @@ async def system_status():
 # ============================================================================
 
 @app.post("/api/v1/bubble/start")
-async def start_bubbles(frequency_hz: int = 40000, duty_cycle: float = 0.5):
-    """Start bubble generation at specified frequency and duty cycle."""
+@limiter.limit("20/minute")
+async def start_bubbles(
+    request,
+    req: BubbleStartRequest,
+    token: str = Depends(verify_api_key),
+):
+    """Start bubble generation at specified frequency and duty cycle.
+
+    Requires: Authorization: Bearer <API_KEY>
+    """
     if not bubble_gen:
+        logger.error("bubble_gen_not_initialized")
         raise HTTPException(status_code=503, detail="Bubble generator not initialized")
 
     try:
-        bubble_gen.set_frequency(frequency_hz)
-        bubble_gen.set_duty_cycle(duty_cycle)
+        bubble_gen.set_frequency(req.frequency_hz)
+        bubble_gen.set_duty_cycle(req.duty_cycle)
         bubble_gen.start()
-        return {"status": "bubbles_started", "frequency": frequency_hz, "duty_cycle": duty_cycle}
+        logger.info("bubbles_started", frequency_hz=req.frequency_hz, duty_cycle=req.duty_cycle)
+        return {
+            "status": "bubbles_started",
+            "frequency_hz": req.frequency_hz,
+            "duty_cycle": req.duty_cycle
+        }
     except ValueError as e:
+        logger.warning("bubble_start_error", error=str(e))
         raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -154,16 +227,27 @@ async def stop_bubbles():
 # ============================================================================
 
 @app.post("/api/v1/laser/power")
-async def set_laser_power(power_w: float):
-    """Set laser output power in watts."""
+@limiter.limit("60/minute")
+async def set_laser_power(
+    request,
+    req: LaserPowerRequest,
+    token: str = Depends(verify_api_key),
+):
+    """Set laser output power in watts.
+
+    Requires: Authorization: Bearer <API_KEY>
+    """
     if not laser_ctrl:
+        logger.error("laser_ctrl_not_initialized")
         raise HTTPException(status_code=503, detail="Laser controller not initialized")
 
-    if not (0 <= power_w <= settings.LASER_POWER):
-        raise HTTPException(status_code=400, detail=f"Power out of range [0, {settings.LASER_POWER}]")
-
-    laser_ctrl.set_power(power_w)
-    return {"status": "laser_power_set", "power_w": power_w}
+    try:
+        laser_ctrl.set_power(req.power_w)
+        logger.info("laser_power_set", power_w=req.power_w)
+        return {"status": "laser_power_set", "power_w": req.power_w}
+    except ValueError as e:
+        logger.warning("laser_power_error", error=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.post("/api/v1/laser/scan")
@@ -181,19 +265,29 @@ async def start_laser_scan():
 # ============================================================================
 
 @app.post("/api/v1/render/object")
-async def render_3d_object(object_type: str, scale: float = 1.0):
+@limiter.limit("30/minute")
+async def render_3d_object(
+    request,
+    req: RenderObjectRequest,
+    token: str = Depends(verify_api_key),
+):
     """
     Render a 3D object type in the volumetric display.
 
     Supported types: sphere, cube, torus, mesh_custom
+
+    Requires: Authorization: Bearer <API_KEY>
     """
     if not renderer:
+        logger.error("renderer_not_initialized")
         raise HTTPException(status_code=503, detail="Renderer not initialized")
 
     try:
-        renderer.render_object(object_type, scale)
-        return {"status": "render_started", "object": object_type, "scale": scale}
+        renderer.render_object(req.object_type, req.scale)
+        logger.info("render_object_started", object_type=req.object_type, scale=req.scale)
+        return {"status": "render_started", "object": req.object_type, "scale": req.scale}
     except ValueError as e:
+        logger.warning("render_error", error=str(e))
         raise HTTPException(status_code=400, detail=str(e))
 
 
@@ -202,43 +296,55 @@ async def render_3d_object(object_type: str, scale: float = 1.0):
 # ============================================================================
 
 @app.post("/api/v1/hud/render")
+@limiter.limit("30/minute")  # 30 renders per minute max
 async def render_hud_frame(
-    speed_kmh: float = 0.0,
-    engine_temp_c: float = 20.0,
-    battery_voltage_v: float = 12.0,
-    engine_current_a: float = 0.0,
-    depth_m: float = 0.0,
-    water_temp_c: float = 15.0,
-    pressure_bar: float = 1.0,
-    salinity_ppt: float = 35.0,
+    request,
+    req: HUDRenderRequest,
+    token: str = Depends(verify_api_key),
 ):
     """
     Render HUD frame with telemetry data.
 
     Supports both Land (Volga automotive) and Marine (underwater) modes.
     Returns metadata about the rendered frame.
+
+    Requires: Authorization: Bearer <API_KEY>
     """
     if not hud_renderer:
+        logger.error("hud_renderer_not_initialized")
         raise HTTPException(status_code=503, detail="HUD renderer not initialized")
 
-    telemetry = TelemetryFrame(
-        speed_kmh=speed_kmh,
-        engine_temp_c=engine_temp_c,
-        battery_voltage_v=battery_voltage_v,
-        engine_current_a=engine_current_a,
-        depth_m=depth_m,
-        water_temp_c=water_temp_c,
-        pressure_bar=pressure_bar,
-        salinity_ppt=salinity_ppt,
-        mode=hud_renderer.mode,
-    )
+    try:
+        telemetry = TelemetryFrame(
+            speed_kmh=req.speed_kmh,
+            engine_temp_c=req.engine_temp_c,
+            battery_voltage_v=req.battery_voltage_v,
+            engine_current_a=req.engine_current_a,
+            depth_m=req.depth_m,
+            water_temp_c=req.water_temp_c,
+            pressure_bar=req.pressure_bar,
+            salinity_ppt=req.salinity_ppt,
+            mode=hud_renderer.mode,
+        )
 
-    result = hud_renderer.render_frame(telemetry)
-    return result
+        result = hud_renderer.render_frame(telemetry)
+        logger.info("hud_render_success", mode=hud_renderer.mode.value, frame=result.get("frame"))
+        return result
+    except ValueError as e:
+        logger.warning("hud_render_validation_error", error=str(e))
+        raise HTTPException(status_code=400, detail=f"Validation error: {str(e)}")
+    except Exception as e:
+        logger.error("hud_render_error", error=str(e), exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal render error")
 
 
 @app.post("/api/v1/hud/mode")
-async def set_hud_mode(mode: str):
+@limiter.limit("60/minute")
+async def set_hud_mode(
+    request,
+    req: HUDModeRequest,
+    token: str = Depends(verify_api_key),
+):
     """
     Set HUD operating mode: land, marine, debug, off
 
@@ -246,35 +352,49 @@ async def set_hud_mode(mode: str):
     - marine: Underwater display (depth gauge, water temp, pressure, salinity)
     - debug: Simulator display (all telemetry at once)
     - off: Display off
+
+    Requires: Authorization: Bearer <API_KEY>
     """
     if not hud_renderer:
+        logger.error("hud_renderer_not_initialized")
         raise HTTPException(status_code=503, detail="HUD renderer not initialized")
 
     try:
-        hud_mode = HUDMode(mode.lower())
+        hud_mode = HUDMode(req.mode)
         hud_renderer.set_mode(hud_mode)
+        logger.info("hud_mode_changed", mode=hud_mode.value)
         return {"status": "hud_mode_set", "mode": hud_mode.value}
-    except ValueError:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid mode '{mode}'. Must be: land, marine, debug, off"
-        )
+    except ValueError as e:
+        logger.warning("hud_mode_invalid", mode=req.mode, error=str(e))
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.post("/api/v1/hud/brightness")
-async def set_hud_brightness(percent: float):
-    """Set HUD display brightness (0-100%)."""
+@limiter.limit("60/minute")
+async def set_hud_brightness(
+    request,
+    req: HUDBrightnessRequest,
+    token: str = Depends(verify_api_key),
+):
+    """Set HUD display brightness (0-100%).
+
+    Requires: Authorization: Bearer <API_KEY>
+    """
     if not hud_renderer:
+        logger.error("hud_renderer_not_initialized")
         raise HTTPException(status_code=503, detail="HUD renderer not initialized")
 
     try:
-        hud_renderer.set_brightness(percent)
+        hud_renderer.set_brightness(req.percent)
+        brightness_cd_m2 = int(4000 * req.percent / 100)
+        logger.info("hud_brightness_set", percent=req.percent, cd_m2=brightness_cd_m2)
         return {
             "status": "hud_brightness_set",
-            "brightness_percent": percent,
-            "brightness_cd_m2": int(4000 * percent / 100),  # DLP TRP-4500 spec: 4000 cd/m²
+            "brightness_percent": req.percent,
+            "brightness_cd_m2": brightness_cd_m2,  # DLP TRP-4500 spec: 4000 cd/m²
         }
     except ValueError as e:
+        logger.warning("hud_brightness_error", error=str(e))
         raise HTTPException(status_code=400, detail=str(e))
 
 
