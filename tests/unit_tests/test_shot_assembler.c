@@ -121,6 +121,17 @@ int main(void)
     check(peaks[2] > 7.9f && peaks[2] < 8.1f, "shot 3 peak ~8g");
     check(b.phase == ASM_IDLE, "assembler returns to idle after the session");
 
+    /* Defensive default: an out-of-range phase (corrupted/uninitialized
+     * memory) must reset to idle and never emit a shot, rather than
+     * reading garbage out of a mismatched switch case. */
+    ShotAssembler corrupted;
+    shot_assembler_init(&corrupted);
+    corrupted.phase = (AssemblerPhase)99;
+    ShotEvent ev;
+    int rc = shot_assembler_process(&corrupted, 12.0f, 0u, &snap, &ev);
+    check(rc == 0, "corrupted phase value emits no shot");
+    check(corrupted.phase == ASM_IDLE, "corrupted phase value recovers to idle");
+
     printf("\nSummary: %d passed, %d failed\n", passed, failed);
     return failed == 0 ? 0 : 1;
 }

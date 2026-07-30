@@ -62,6 +62,13 @@ void m4_query_status(void);
 /* ============ M4 Task ============ */
 
 /**
+ * Drain every shot currently queued in the IPC ring into the batch buffer,
+ * flushing to Flash once the batch threshold (50) is reached. One bounded
+ * step of m4_logging_task()'s otherwise-infinite loop, callable on its own.
+ */
+void m4_logging_task_drain(void);
+
+/**
  * M4 logging task (main loop for M4 core).
  * Runs at low priority to drain the IPC ring and flush to Flash.
  */
@@ -71,5 +78,17 @@ void m4_logging_task(void *argument);
  * M4 boot sequence (entry point for M4 core).
  */
 int m4_main(void);
+
+/* ============ USB HS Communication (Placeholder) ============ */
+
+/**
+ * USB HS endpoint handler for telemetry streaming (IN direction).
+ */
+void usb_hs_data_in_callback(void);
+
+/**
+ * USB HS command reception (host -> device control transfers).
+ */
+void usb_hs_setup_callback(void);
 
 #endif /* __M4_CORE_H__ */

@@ -19,6 +19,14 @@
 #include "stm32h7xx.h"
 #include "w25q128jv.h"
 
+/* I/O hooks are weak so host unit tests can override them with simulators;
+ * HAL integration replaces the default bodies. */
+#if defined(__GNUC__)
+#define VKTE_WEAK __attribute__((weak))
+#else
+#define VKTE_WEAK
+#endif
+
 // ============================================================================
 // Command Definitions
 // ============================================================================
@@ -66,7 +74,7 @@ static struct {
  * 4. Send/receive data
  * 5. Release CS
  */
-static int qspi_command(uint8_t cmd, uint32_t addr, const uint8_t *tx_data,
+VKTE_WEAK int qspi_command(uint8_t cmd, uint32_t addr, const uint8_t *tx_data,
                         uint8_t *rx_data, uint32_t length, int addr_mode)
 {
     // addr_mode: 0=no address, 1=3-byte address, 2=4-byte address
@@ -95,7 +103,7 @@ static int qspi_command(uint8_t cmd, uint32_t addr, const uint8_t *tx_data,
  * Read status register (non-blocking)
  * Command: 0x05 + 1 dummy clock + 8 data bits
  */
-static uint8_t qspi_read_status_register(void)
+VKTE_WEAK uint8_t qspi_read_status_register(void)
 {
     uint8_t status = 0;
     qspi_command(W25Q128JV_CMD_READ_STATUS, 0, NULL, &status, 1, 0);
@@ -106,7 +114,7 @@ static uint8_t qspi_read_status_register(void)
  * Write status register (blocking)
  * Command: 0x01 + 8 data bits
  */
-static int qspi_write_status_register(uint8_t status)
+VKTE_WEAK int qspi_write_status_register(uint8_t status)
 {
     return qspi_command(W25Q128JV_CMD_WRITE_STATUS, 0, &status, NULL, 1, 0);
 }
@@ -115,7 +123,7 @@ static int qspi_write_status_register(uint8_t status)
  * Poll busy bit (WIP) with timeout
  * Returns: 0 when ready, -1 on timeout
  */
-static int qspi_wait_busy(uint32_t timeout_ms)
+VKTE_WEAK int qspi_wait_busy(uint32_t timeout_ms)
 {
     uint32_t start = 0;  // TODO: Get system tick count
 

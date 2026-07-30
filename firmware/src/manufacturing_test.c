@@ -14,6 +14,16 @@
 #include "stm32h7xx.h"
 #include "manufacturing_test.h"
 
+/* Individual subtests are weak so host unit tests can override them to
+ * exercise pat_run_all_tests()'s PAT_FAIL accounting branches, which are
+ * otherwise unreachable while every subtest is a hardcoded PAT_PASS
+ * placeholder. HAL integration replaces the default bodies. */
+#if defined(__GNUC__)
+#define VKTE_WEAK __attribute__((weak))
+#else
+#define VKTE_WEAK
+#endif
+
 // ============================================================================
 // Device State
 // ============================================================================
@@ -21,6 +31,12 @@
 static struct {
     int initialized;
     pat_session_t last_session;
+    int has_last_session;  // Explicit flag; NOT inferred from timestamp==0,
+                            // since get_time_ms() is a stub that always
+                            // returns 0 today, and even once implemented a
+                            // PAT run early at boot could legitimately have
+                            // timestamp==0 -- indistinguishable from "never
+                            // ran" if that were used as the sentinel.
 } pat_state = {0};
 
 // ============================================================================
@@ -66,6 +82,7 @@ static uint16_t adc_read(uint8_t channel)
 int pat_init(void)
 {
     memset(&pat_state.last_session, 0, sizeof(pat_session_t));
+    pat_state.has_last_session = 0;
     pat_state.initialized = 1;
 
     return 0;
@@ -203,9 +220,17 @@ int pat_run_all_tests(uint16_t test_mask, pat_session_t *session)
     }
 
     if (test_mask & PAT_TEST_FLASH) {
-        int result = pat_test_qspi_flash();  // Already tested above
+        // Distinct from PAT_TEST_QSPI (bus-level check): this exercises the
+        // session-logging Flash surface. Recorded as its own results[] entry
+        // like every other test, so it never inflates passed_count without a
+        // matching diagnostic record.
+        int result = pat_test_qspi_flash();
+        session->results[test_index].test_id = PAT_TEST_FLASH;
+        session->results[test_index].result = result;
+        strcpy(session->results[test_index].description, "Flash Storage");
         if (result == PAT_PASS) session->passed_count++;
         else if (result == PAT_FAIL) { session->failed_count++; overall_result = -1; }
+        test_index++;
     }
 
     if (test_mask & PAT_TEST_IWDG) {
@@ -233,6 +258,7 @@ int pat_run_all_tests(uint16_t test_mask, pat_session_t *session)
 
     // Save to last session and EEPROM
     memcpy(&pat_state.last_session, session, sizeof(pat_session_t));
+    pat_state.has_last_session = 1;
     pat_save_results_to_eeprom(session);
 
     return overall_result;
@@ -241,7 +267,7 @@ int pat_run_all_tests(uint16_t test_mask, pat_session_t *session)
 /**
  * Test power supply voltages
  */
-int pat_test_power_supply(void)
+VKTE_WEAK int pat_test_power_supply(void)
 {
     // TODO: Implement ADC-based voltage measurement
     // Check:
@@ -255,7 +281,7 @@ int pat_test_power_supply(void)
 /**
  * Test system clocks
  */
-int pat_test_system_clocks(void)
+VKTE_WEAK int pat_test_system_clocks(void)
 {
     // TODO: Measure actual clock frequencies
     // - M7 core: 480 MHz ±5%
@@ -269,7 +295,7 @@ int pat_test_system_clocks(void)
 /**
  * Test UART debug interface
  */
-int pat_test_uart_debug(void)
+VKTE_WEAK int pat_test_uart_debug(void)
 {
     // TODO: Send test pattern via UART, verify echo
     // UART1 @ 115200 8N1
@@ -280,7 +306,7 @@ int pat_test_uart_debug(void)
 /**
  * Test I2C bus
  */
-int pat_test_i2c_bus(void)
+VKTE_WEAK int pat_test_i2c_bus(void)
 {
     // TODO: Check I2C pull-up resistors (bus idle state)
     // Both SDA and SCL should be high when no device is communicating
@@ -291,7 +317,7 @@ int pat_test_i2c_bus(void)
 /**
  * Test SPI bus
  */
-int pat_test_spi_bus(void)
+VKTE_WEAK int pat_test_spi_bus(void)
 {
     // TODO: Toggle SPI lines and verify state changes
     // MOSI, MISO, SCK, CS should all respond properly
@@ -302,7 +328,7 @@ int pat_test_spi_bus(void)
 /**
  * Test QSPI Flash (W25Q128JV)
  */
-int pat_test_qspi_flash(void)
+VKTE_WEAK int pat_test_qspi_flash(void)
 {
     // TODO: Implement Flash test:
     // 1. Read JEDEC ID (should be 0xEF4018)
@@ -315,7 +341,7 @@ int pat_test_qspi_flash(void)
 /**
  * Test IMU sensor (ICM-20689)
  */
-int pat_test_imu_sensor(void)
+VKTE_WEAK int pat_test_imu_sensor(void)
 {
     // TODO: Implement IMU test:
     // 1. Initialize ICM-20689
@@ -329,7 +355,7 @@ int pat_test_imu_sensor(void)
 /**
  * Test rangefinder sensor (VL53L0X)
  */
-int pat_test_rangefinder_sensor(void)
+VKTE_WEAK int pat_test_rangefinder_sensor(void)
 {
     // TODO: Implement rangefinder test:
     // 1. Initialize VL53L0X
@@ -343,7 +369,7 @@ int pat_test_rangefinder_sensor(void)
 /**
  * Test temperature and barometer sensors
  */
-int pat_test_temp_baro_sensors(void)
+VKTE_WEAK int pat_test_temp_baro_sensors(void)
 {
     // TODO: Implement sensor tests:
     // 1. MCP9808: Read temp, verify in realistic range (0-50°C)
@@ -355,7 +381,7 @@ int pat_test_temp_baro_sensors(void)
 /**
  * Test EEPROM (AT24C256C)
  */
-int pat_test_eeprom_memory(void)
+VKTE_WEAK int pat_test_eeprom_memory(void)
 {
     // TODO: Implement EEPROM test:
     // 1. Initialize AT24C256C
@@ -369,7 +395,7 @@ int pat_test_eeprom_memory(void)
 /**
  * Test IWDG (Independent Watchdog)
  */
-int pat_test_iwdg_watchdog(void)
+VKTE_WEAK int pat_test_iwdg_watchdog(void)
 {
     // TODO: Implement IWDG test:
     // 1. Initialize IWDG with 30-second timeout
@@ -383,7 +409,7 @@ int pat_test_iwdg_watchdog(void)
 /**
  * Test WWDG (Window Watchdog)
  */
-int pat_test_wwdg_watchdog(void)
+VKTE_WEAK int pat_test_wwdg_watchdog(void)
 {
     // TODO: Implement WWDG test:
     // 1. Initialize WWDG with 1-second window
@@ -403,7 +429,7 @@ int pat_get_last_results(pat_session_t *session)
         return -1;
     }
 
-    if (pat_state.last_session.timestamp == 0) {
+    if (!pat_state.has_last_session) {
         return -1;  // No session available
     }
 

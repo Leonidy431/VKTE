@@ -209,6 +209,28 @@ void test_kalman_covariance_decrease(TestRunner *runner)
     printf("  Reduction factor: %.2f x\n", initial_covariance / kf.p_est);
 }
 
+void test_kalman_adapt_for_recoil(TestRunner *runner)
+{
+    printf("\n=== Test: Recoil-Triggered Covariance Adaptation ===\n");
+
+    KalmanFilter kf;
+    kalman_init(&kf, 0.001f, 0.1f);
+
+    /* Below RECOIL_THRESHOLD_G: quiescent branch, tight (default) covariances */
+    kalman_adapt_for_recoil(&kf, 1.0f);
+    test_assert_float(runner, kf.q, 0.001f, 1e-6f, "Quiescent branch sets default process noise");
+    test_assert_float(runner, kf.r, 0.1f, 1e-6f, "Quiescent branch sets default measurement noise");
+
+    /* Above RECOIL_THRESHOLD_G (5.0): high-energy branch, loosened q, tightened r */
+    kalman_adapt_for_recoil(&kf, 8.0f);
+    test_assert_float(runner, kf.q, 0.001f * 50.0f, 1e-6f, "Recoil branch loosens process noise 50x");
+    test_assert_float(runner, kf.r, 0.1f * 0.5f, 1e-6f, "Recoil branch tightens measurement noise by half");
+
+    /* Switching back below threshold restores quiescent covariances */
+    kalman_adapt_for_recoil(&kf, 0.5f);
+    test_assert_float(runner, kf.q, 0.001f, 1e-6f, "Adaptation reverts after recoil event ends");
+}
+
 /* ============ Main Test Runner ============ */
 
 int main(void)
@@ -226,6 +248,7 @@ int main(void)
     test_kalman_fast_response(&runner);
     test_kalman_sensor_with_varying_noise(&runner);
     test_kalman_covariance_decrease(&runner);
+    test_kalman_adapt_for_recoil(&runner);
 
     /* Summary */
     printf("\n╔════════════════════════════════════════════════════════════╗\n");

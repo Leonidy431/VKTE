@@ -15,6 +15,14 @@
 #include "stm32h7xx.h"
 #include "session_manager.h"
 
+/* I/O hooks are weak so host unit tests can override them with simulators;
+ * HAL integration replaces the default bodies. */
+#if defined(__GNUC__)
+#define VKTE_WEAK __attribute__((weak))
+#else
+#define VKTE_WEAK
+#endif
+
 // ============================================================================
 // Constants
 // ============================================================================
@@ -28,6 +36,10 @@
 // ============================================================================
 // Device State
 // ============================================================================
+
+/* Session id 0 is reserved as the "no active session" sentinel throughout
+ * this module, so allocation starts at 1 and skips 0 on wraparound. */
+static uint32_t session_next_id = 1;
 
 static struct {
     int initialized;
@@ -92,7 +104,7 @@ static uint32_t crc32_calc(const uint8_t *data, uint32_t length)
  * Read from Flash (to be implemented with W25Q128JV driver)
  * TODO: Implement using w25q128jv_read()
  */
-static int flash_read(uint32_t offset, uint8_t *buf, uint32_t len)
+VKTE_WEAK int flash_read(uint32_t offset, uint8_t *buf, uint32_t len)
 {
     // TODO: Call w25q128jv_read(offset, buf, len);
     // For now: return success (stub)
@@ -104,7 +116,7 @@ static int flash_read(uint32_t offset, uint8_t *buf, uint32_t len)
  * Write to Flash (to be implemented with W25Q128JV driver)
  * TODO: Implement using w25q128jv_write()
  */
-static int flash_write(uint32_t offset, const uint8_t *buf, uint32_t len)
+VKTE_WEAK int flash_write(uint32_t offset, const uint8_t *buf, uint32_t len)
 {
     // TODO: Call w25q128jv_write(offset, buf, len);
     // For now: return success (stub)
@@ -115,7 +127,7 @@ static int flash_write(uint32_t offset, const uint8_t *buf, uint32_t len)
  * Erase Flash sector (4 KB)
  * TODO: Implement using w25q128jv_erase_sector()
  */
-static int flash_erase_sector(uint32_t offset)
+VKTE_WEAK int flash_erase_sector(uint32_t offset)
 {
     // TODO: Call w25q128jv_erase_sector(offset);
     // For now: return success (stub)
@@ -136,6 +148,25 @@ static int metadata_load(void)
     // Read metadata block from Flash
     if (flash_read(SESSION_METADATA_ADDR, buf, sizeof(buf)) != 0) {
         return -1;
+    }
+
+    // A never-formatted (factory-erased) W25Q128JV reads back as all 0xFF,
+    // not all-zero -- but SESSION_STATE_EMPTY is 0x00. Without this check,
+    // every metadata_cache[i].state deserializes to 0xFF on first boot,
+    // metadata_find_empty() never matches SESSION_STATE_EMPTY, and
+    // session_create() fails permanently on brand-new hardware. Detect the
+    // erased pattern and treat it as an explicitly empty table instead of
+    // deserializing it as (invalid) session records.
+    int all_erased = 1;
+    for (uint32_t i = 0; i < sizeof(buf); i++) {
+        if (buf[i] != 0xFF) {
+            all_erased = 0;
+            break;
+        }
+    }
+    if (all_erased) {
+        memset(session_state.metadata_cache, 0, sizeof(session_state.metadata_cache));
+        return 0;
     }
 
     // Deserialize metadata
@@ -267,22 +298,26 @@ int session_create(uint32_t *session_id)
         return -1;  // No space for new session
     }
 
-    // Calculate Flash offset for new session
-    // Start after metadata area (at SESSION_DATA_ADDR)
-    offset = SESSION_DATA_ADDR;
-    for (int i = 0; i < idx; i++) {
-        if (session_state.metadata_cache[i].state != SESSION_STATE_EMPTY) {
-            offset += session_state.metadata_cache[i].size_sectors * FLASH_SECTOR_SIZE;
-        }
-    }
+    // Calculate Flash offset for new session: fixed-size slot addressing.
+    // Each metadata index owns a dedicated SESSION_MAX_SIZE window, so a
+    // session's offset depends only on its own slot index, never on how
+    // much data neighboring sessions happen to have written. (Summing
+    // neighbors' size_sectors here previously let unrelated sessions
+    // collide onto the same Flash offset whenever an earlier slot held
+    // less than a full SESSION_MAX_SIZE worth of data, which is the
+    // common case.)
+    offset = SESSION_DATA_ADDR + (uint32_t)idx * SESSION_MAX_SIZE;
 
     // Check if we have space
     if (offset + SESSION_MAX_SIZE > FLASH_TOTAL_SIZE) {
         return -1;  // Flash full
     }
 
-    // Create session ID (use timestamp-based ID)
-    *session_id = (uint32_t)0;  // TODO: Get timestamp
+    // Allocate a unique session ID (0 is reserved as "no session")
+    *session_id = session_next_id++;
+    if (session_next_id == 0) {
+        session_next_id = 1;
+    }
 
     // Initialize header
     memset(&header, 0, sizeof(header));
@@ -302,12 +337,19 @@ int session_create(uint32_t *session_id)
     metadata->session_id = *session_id;
     metadata->start_timestamp = header.start_timestamp;
     metadata->flash_offset = offset;
-    metadata->size_sectors = 0;
+    metadata->size_bytes = 0;
     metadata->state = SESSION_STATE_ACTIVE;
     session_state.metadata_dirty = 1;
 
     // Save metadata and set active session
     if (metadata_save() != 0) {
+        // Roll back the in-RAM mutation: metadata_cache[idx] must not be
+        // left marked ACTIVE for a session that was never actually
+        // persisted (metadata_save() failed) and that active_session_id
+        // never points to. Left uncorrected, metadata_find_empty() would
+        // treat this slot as permanently occupied, leaking one of the 16
+        // session slots on every failed create.
+        memset(metadata, 0, sizeof(*metadata));
         return -1;
     }
 
@@ -380,18 +422,29 @@ int session_flush(void)
 
     // Calculate write offset (after session header and existing data)
     offset = session_state.active_session_offset + sizeof(session_header_t) +
-             session_state.metadata_cache[idx].size_sectors * FLASH_SECTOR_SIZE;
+             session_state.metadata_cache[idx].size_bytes;
 
     // Write buffer to Flash
     if (flash_write(offset, (uint8_t *)session_state.meas_buffer, write_size) != 0) {
         return -1;
     }
 
-    // Update metadata: increase size in sectors
-    uint32_t new_sectors = (offset + write_size - session_state.active_session_offset) /
-                           FLASH_SECTOR_SIZE;
-    session_state.metadata_cache[idx].size_sectors = new_sectors;
+    // Update metadata: track exact bytes written (not sector-rounded, see
+    // the size_bytes field comment in session_manager.h)
+    session_state.metadata_cache[idx].size_bytes += write_size;
     session_state.metadata_dirty = 1;
+
+    // Persist the updated size_bytes immediately. The whole reason to
+    // flush periodically during a session -- instead of only once at
+    // close -- is durability across a mid-session restart (power loss,
+    // watchdog reset). Without this save, the measurement bytes above ARE
+    // safely on Flash, but nothing durable records how many bytes belong
+    // to this session; a restart before session_close() would deserialize
+    // size_bytes back to 0 and every flushed-but-not-closed measurement
+    // becomes permanently unreadable via session_read_measurement().
+    if (metadata_save() != 0) {
+        return -1;
+    }
 
     // Clear buffer
     session_state.meas_buffer_count = 0;
@@ -441,7 +494,7 @@ int session_close(void)
 
     // Update header
     header.state = SESSION_STATE_CLOSED;
-    header.size_bytes = metadata->size_sectors * FLASH_SECTOR_SIZE;
+    header.size_bytes = metadata->size_bytes;
 
     // Write updated header back
     if (flash_write(session_state.active_session_offset, (uint8_t *)&header, sizeof(header)) != 0) {
@@ -488,7 +541,8 @@ int session_read_measurement(uint32_t session_id, uint32_t index, measurement_re
 
     // Check bounds
     uint32_t session_end = session_state.metadata_cache[idx].flash_offset +
-                          (session_state.metadata_cache[idx].size_sectors * FLASH_SECTOR_SIZE);
+                          sizeof(session_header_t) +
+                          session_state.metadata_cache[idx].size_bytes;
     if (offset + sizeof(measurement_record_t) > session_end) {
         return -1;  // Index out of range
     }
@@ -574,22 +628,41 @@ int session_erase(uint32_t session_id)
 
     metadata = &session_state.metadata_cache[idx];
 
-    // Erase Flash sectors for this session
+    // Erase Flash sectors for this session. Flash can only be erased in
+    // whole FLASH_SECTOR_SIZE units, so round the exact (header + data)
+    // byte count up to a whole number of sectors -- at least one, since
+    // the header itself always occupies part of a sector even for a
+    // session with zero measurements.
+    uint32_t used_bytes = sizeof(session_header_t) + metadata->size_bytes;
+    uint32_t sector_count = (used_bytes + FLASH_SECTOR_SIZE - 1) / FLASH_SECTOR_SIZE;
+    if (sector_count == 0) {
+        sector_count = 1;
+    }
+
     uint32_t offset = metadata->flash_offset;
-    for (int i = 0; i < metadata->size_sectors; i++) {
+    for (uint32_t i = 0; i < sector_count; i++) {
         if (flash_erase_sector(offset) != 0) {
             return -1;
         }
         offset += FLASH_SECTOR_SIZE;
     }
 
-    // Mark as empty in metadata
+    // Mark as empty in metadata. Keep a copy first: if metadata_save()
+    // below fails, the underlying Flash sectors have already been erased
+    // for real, but this in-RAM slot must NOT be committed to EMPTY
+    // without a successful persist -- otherwise metadata_find_by_id()
+    // can no longer find this session_id to retry the erase, while
+    // metadata_find_empty() still refuses the slot (its on-Flash
+    // metadata was never actually rewritten), leaking it exactly like
+    // the equivalent failure path in session_create().
+    session_metadata_t saved = *metadata;
     memset(metadata, 0, sizeof(session_metadata_t));
     metadata->state = SESSION_STATE_EMPTY;
     session_state.metadata_dirty = 1;
 
     // Save metadata
     if (metadata_save() != 0) {
+        *metadata = saved;
         return -1;
     }
 
@@ -610,7 +683,6 @@ uint32_t session_get_active(void)
 int session_get_measurement_count(uint32_t session_id)
 {
     int idx;
-    uint32_t size_bytes;
 
     // Find session metadata
     idx = metadata_find_by_id(session_id);
@@ -618,10 +690,11 @@ int session_get_measurement_count(uint32_t session_id)
         return -1;
     }
 
-    // Calculate count: size in sectors / (size of measurement record)
-    size_bytes = session_state.metadata_cache[idx].size_sectors * FLASH_SECTOR_SIZE -
-                 sizeof(session_header_t);  // Subtract header size
-    return size_bytes / sizeof(measurement_record_t);
+    // size_bytes tracks exact measurement-data bytes written (header
+    // excluded, see the field comment in session_manager.h), and only ever
+    // grows by whole-record increments from session_flush(), so no
+    // subtraction or underflow guard is needed here.
+    return session_state.metadata_cache[idx].size_bytes / sizeof(measurement_record_t);
 }
 
 /**

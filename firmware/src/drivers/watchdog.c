@@ -21,7 +21,9 @@
 // ============================================================================
 
 // IWDG register definitions (STM32H745 Reference Manual)
-#define IWDG_BASE              0x40003000
+#ifndef IWDG_BASE  /* overridable so host tests can map fake registers */
+#define IWDG_BASE              0x40003000UL
+#endif
 #define IWDG_KR                (*(volatile uint32_t*)(IWDG_BASE + 0x00))  // Key Register
 #define IWDG_PR                (*(volatile uint32_t*)(IWDG_BASE + 0x04))  // Prescaler
 #define IWDG_RLR               (*(volatile uint32_t*)(IWDG_BASE + 0x08))  // Reload
@@ -133,7 +135,9 @@ uint16_t iwdg_get_count(void)
 // ============================================================================
 
 // WWDG register definitions (STM32H745 Reference Manual)
-#define WWDG_BASE              0x40002C00
+#ifndef WWDG_BASE  /* overridable so host tests can map fake registers */
+#define WWDG_BASE              0x40002C00UL
+#endif
 #define WWDG_CR                (*(volatile uint32_t*)(WWDG_BASE + 0x00))  // Control
 #define WWDG_CFR               (*(volatile uint32_t*)(WWDG_BASE + 0x04))  // Config
 #define WWDG_SR                (*(volatile uint32_t*)(WWDG_BASE + 0x08))  // Status

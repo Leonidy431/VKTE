@@ -46,16 +46,22 @@ typedef struct {
 } session_header_t;
 
 /**
- * Session metadata for index (16 bytes per entry)
+ * Session metadata for index (20 bytes per entry)
  * Stored in metadata area at start of Flash
  */
 typedef struct {
     uint32_t session_id;            // Unique ID
     uint32_t start_timestamp;       // Creation time
     uint32_t flash_offset;          // Byte offset in Flash
-    uint16_t size_sectors;          // Number of 4KB sectors used
+    // Exact bytes of measurement data written so far (data only, header
+    // excluded). Previously stored as whole 4KB sectors (size_sectors);
+    // that lost almost every real-world flush, since a batch of even 16
+    // measurement_record_t entries (~450 bytes) always rounded down to
+    // "0 sectors used", making session_get_measurement_count() and
+    // session_read_measurement() blind to all data actually on Flash.
+    uint32_t size_bytes;
     uint8_t state;                  // SESSION_STATE_*
-    uint8_t reserved;
+    uint8_t reserved[3];
 } session_metadata_t;
 
 /**

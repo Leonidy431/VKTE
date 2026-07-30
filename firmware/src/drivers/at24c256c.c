@@ -18,6 +18,14 @@
 #include "stm32h7xx.h"
 #include "at24c256c.h"
 
+/* I/O hooks are weak so host unit tests can override them with simulators;
+ * HAL integration replaces the default bodies. */
+#if defined(__GNUC__)
+#define VKTE_WEAK __attribute__((weak))
+#else
+#define VKTE_WEAK
+#endif
+
 // ============================================================================
 // Register Definitions
 // ============================================================================
@@ -41,7 +49,7 @@ static struct {
  * Read bytes from EEPROM via I2C with 16-bit address
  * Returns: 0 on success, -1 on timeout
  */
-static int at24c256c_read_bytes(uint16_t mem_addr, uint8_t *buf, uint16_t len)
+VKTE_WEAK int at24c256c_read_bytes(uint16_t mem_addr, uint8_t *buf, uint16_t len)
 {
     // Address format for 256 Kbit (32 KB) devices: 16-bit big-endian
     uint8_t addr_bytes[2] = {(uint8_t)(mem_addr >> 8), (uint8_t)mem_addr};
@@ -56,7 +64,7 @@ static int at24c256c_read_bytes(uint16_t mem_addr, uint8_t *buf, uint16_t len)
  * Write bytes to EEPROM via I2C with 16-bit address
  * Returns: 0 on success, -1 on timeout
  */
-static int at24c256c_write_bytes(uint16_t mem_addr, const uint8_t *buf, uint16_t len)
+VKTE_WEAK int at24c256c_write_bytes(uint16_t mem_addr, const uint8_t *buf, uint16_t len)
 {
     // TODO: Replace with HAL_I2C_Mem_Write(&hi2c1, AT24C256C_ADDR<<1, mem_addr,
     //                                        I2C_MEMADD_SIZE_16BIT, (uint8_t*)buf, len, 1000);
@@ -73,7 +81,7 @@ static int at24c256c_write_bytes(uint16_t mem_addr, const uint8_t *buf, uint16_t
  * Check if EEPROM is ready (ACK polling)
  * Returns: 1 if ready, 0 if busy
  */
-static int at24c256c_is_ready(void)
+VKTE_WEAK int at24c256c_is_ready(void)
 {
     // TODO: Replace with HAL_I2C_IsDeviceReady result
     // for (int i = 0; i < 10; i++) {

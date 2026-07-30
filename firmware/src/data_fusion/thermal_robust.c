@@ -20,22 +20,10 @@
 /* Huber loss threshold: residuals > k*sigma are treated as outliers */
 #define HUBER_K 2.0f  /* Typical value: 1.345 to 2.5 */
 
-/**
- * Compute the Huber loss for a single residual.
- * Linear for |r| < k*sigma, quadratic for large residuals.
- *
- * L(r) = { r²/2,           if |r| < k
- *        { k(|r| - k/2),   if |r| >= k
- */
-static float huber_loss(float residual, float k)
-{
-    float abs_r = fabsf(residual);
-    if (abs_r < k) {
-        return 0.5f * residual * residual;
-    } else {
-        return k * (abs_r - 0.5f * k);
-    }
-}
+/* Floor for the robust sigma estimate (mm). Prevents the Huber threshold
+ * from collapsing to zero when the fit is (near) exact; see the comment
+ * at its use site in thermal_fit_poi_shift_robust(). */
+#define MIN_SIGMA 1e-4f
 
 /**
  * Estimate the standard deviation of residuals (robust version).
@@ -70,6 +58,23 @@ static float estimate_sigma_robust(const float *residuals, int n)
 }
 
 /**
+ * Propagate a fitted (slope, intercept) pair into the model's baseline_temp_c
+ * convention (see thermal_predict_shift_robust(): predictions are computed
+ * as slope * (temp - baseline_temp_c), i.e. baseline_temp_c is the fitted
+ * line's temperature-axis zero crossing). Without this, the caller-supplied
+ * baseline_temp_c the model was constructed with -- not the temperature the
+ * regression actually found -- silently determines every prediction and
+ * outlier residual, which is wrong whenever the data isn't already anchored
+ * exactly at that temperature.
+ */
+static void thermal_robust_set_baseline(ThermalModel *model, float slope, float intercept)
+{
+    if (fabsf(slope) > 1e-9f) {
+        model->baseline_temp_c = -intercept / slope;
+    }
+}
+
+/**
  * Iteratively reweighted least squares with Huber loss.
  * Robust fitting that downweights outliers.
  */
@@ -92,6 +97,7 @@ int thermal_fit_poi_shift_robust(ThermalModel *model,
 
     /* Iterative reweighting (typically 3-5 iterations converges) */
     float prev_slope = 0.0f;
+    float prev_intercept = 0.0f;
     for (int iter = 0; iter < 5; iter++) {
         /* Recompute weighted sums */
         sum_t = sum_s = sum_tt = sum_ts = 0;
@@ -124,6 +130,17 @@ int thermal_fit_poi_shift_robust(ThermalModel *model,
         }
         float sigma = estimate_sigma_robust(residuals, n);
 
+        /* Floor sigma so a near-perfect fit (residuals collapsing to ~0,
+         * common with clean calibration data) can't drive the Huber
+         * threshold k to zero. Without this floor, k=0 combined with the
+         * strict "< k" inlier test below misclassifies exact-zero
+         * residuals as outliers, their weights collapse to 0/eps=0, and
+         * the *next* iteration's weighted sums all vanish -- turning a
+         * perfect fit into a singular-matrix failure. */
+        if (sigma < MIN_SIGMA) {
+            sigma = MIN_SIGMA;
+        }
+
         /* Update weights based on Huber loss */
         float k = HUBER_K * sigma;
         for (int i = 0; i < n; i++) {
@@ -139,12 +156,15 @@ int thermal_fit_poi_shift_robust(ThermalModel *model,
         /* Check convergence */
         if (fabsf(slope - prev_slope) < 1e-6f) {
             model->poi_shift_per_degree = slope;
+            thermal_robust_set_baseline(model, slope, intercept);
             return 0;
         }
         prev_slope = slope;
+        prev_intercept = intercept;
     }
 
     model->poi_shift_per_degree = prev_slope;
+    thermal_robust_set_baseline(model, prev_slope, prev_intercept);
     return 0;
 }
 
@@ -167,10 +187,17 @@ int thermal_detect_outliers(const float *temps,
         return 0;
     }
 
-    /* Compute residuals and sigma */
+    /* Compute residuals and sigma. Must use the same baseline-relative
+     * prediction as thermal_predict_shift_robust() (slope * (temp -
+     * baseline_temp_c)) -- using bare slope * temp here previously ignored
+     * the fitted intercept entirely, so on any data not already anchored
+     * through temp=0 (i.e. essentially all real barrel-temperature data,
+     * which runs 20-100+ deg C) every residual carried the same large,
+     * systematic offset and no point's residual stood out from the rest,
+     * silently defeating outlier detection. */
     float residuals[count];
     for (int i = 0; i < count; i++) {
-        residuals[i] = shifts[i] - (model.poi_shift_per_degree * temps[i]);
+        residuals[i] = shifts[i] - model.poi_shift_per_degree * (temps[i] - model.baseline_temp_c);
     }
     float sigma = estimate_sigma_robust(residuals, count);
 

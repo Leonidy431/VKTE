@@ -51,7 +51,9 @@ void ipc_notify_m4_shot_available(void)
      * - Or write to a dedicated NVIC/mailbox register
      * For now, this is a placeholder that could trigger an interrupt.
      */
+#if defined(__arm__)
     __asm volatile ("dsb");  /* Data sync barrier */
+#endif
 }
 
 /**
@@ -100,6 +102,44 @@ int ipc_dequeue_shot(ShotEvent *shot)
 
 /* ============ M4 Logging Task ============ */
 
+/* Batch shots before flushing to Flash. File-scope (not local to
+ * m4_logging_task()) so a single drain pass is callable -- and testable --
+ * on its own; state persists across calls exactly as it would across
+ * m4_logging_task()'s infinite-loop iterations. */
+static ShotEvent batch[50];
+static uint32_t batch_count = 0;
+#define BATCH_THRESHOLD 50u
+
+/**
+ * Drain every shot currently queued in the IPC ring into the batch,
+ * flushing to Flash once BATCH_THRESHOLD is reached. Extracted from
+ * m4_logging_task()'s infinite loop so it runs as one bounded, testable
+ * step; the task itself just calls this forever with a yield in between.
+ */
+void m4_logging_task_drain(void)
+{
+    ShotEvent shot;
+
+    while (ipc_dequeue_shot(&shot)) {
+        batch[batch_count++] = shot;
+        shots_logged++;
+
+        /* Batch is full; flush to Flash */
+        if (batch_count >= BATCH_THRESHOLD) {
+            printf("[M4] Flushing batch of %lu shots to Flash\n",
+                   (unsigned long)batch_count);
+            /* In a real implementation, this would:
+             * 1. Convert each shot to ShotRecord
+             * 2. Call session_log_shot() for each
+             * 3. Periodically call session_flush_to_flash()
+             * For now, simulate the flush.
+             */
+            batch_count = 0;
+            flush_count++;
+        }
+    }
+}
+
 /**
  * M4 Core main loop: drain the IPC ring, log to Flash, handle USB.
  * Runs at lower priority than M7 real-time tasks.
@@ -111,33 +151,8 @@ void m4_logging_task(void *argument)
     printf("[M4] Initializing M4 core (240 MHz)...\n");
     m4_state = STATE_IDLE;
 
-    /* Local buffer: batch shots before flushing to Flash */
-    ShotEvent batch[50];
-    uint32_t batch_count = 0;
-    const uint32_t BATCH_THRESHOLD = 50;
-
     while (1) {
-        ShotEvent shot;
-
-        /* Drain available shots from the IPC ring */
-        while (ipc_dequeue_shot(&shot)) {
-            batch[batch_count++] = shot;
-            shots_logged++;
-
-            /* Batch is full; flush to Flash */
-            if (batch_count >= BATCH_THRESHOLD) {
-                printf("[M4] Flushing batch of %lu shots to Flash\n",
-                       (unsigned long)batch_count);
-                /* In a real implementation, this would:
-                 * 1. Convert each shot to ShotRecord
-                 * 2. Call session_log_shot() for each
-                 * 3. Periodically call session_flush_to_flash()
-                 * For now, simulate the flush.
-                 */
-                batch_count = 0;
-                flush_count++;
-            }
-        }
+        m4_logging_task_drain();
 
         /* Yield to avoid hogging the M4 CPU */
         /* In FreeRTOS, this would be: osDelay(10); */

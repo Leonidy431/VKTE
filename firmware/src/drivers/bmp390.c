@@ -21,6 +21,14 @@
 #include "stm32h7xx.h"
 #include "bmp390.h"
 
+/* I/O hooks are weak so host unit tests can override them with simulators;
+ * HAL integration replaces the default bodies. */
+#if defined(__GNUC__)
+#define VKTE_WEAK __attribute__((weak))
+#else
+#define VKTE_WEAK
+#endif
+
 // ============================================================================
 // Register Definitions
 // ============================================================================
@@ -82,7 +90,7 @@ static struct {
 /**
  * Read single byte from register via I2C
  */
-static uint8_t bmp390_read_byte(uint8_t reg_addr)
+VKTE_WEAK uint8_t bmp390_read_byte(uint8_t reg_addr)
 {
     uint8_t data = 0;
     // TODO: Replace with HAL_I2C_Mem_Read(&hi2c1, BMP390_I2C_ADDR<<1, reg_addr,
@@ -93,7 +101,7 @@ static uint8_t bmp390_read_byte(uint8_t reg_addr)
 /**
  * Write single byte to register via I2C
  */
-static int bmp390_write_byte(uint8_t reg_addr, uint8_t value)
+VKTE_WEAK int bmp390_write_byte(uint8_t reg_addr, uint8_t value)
 {
     // TODO: Replace with HAL_I2C_Mem_Write(&hi2c1, BMP390_I2C_ADDR<<1, reg_addr,
     //                                        I2C_MEMADD_SIZE_8BIT, &value, 1, 1000);
@@ -103,7 +111,7 @@ static int bmp390_write_byte(uint8_t reg_addr, uint8_t value)
 /**
  * Read multiple bytes from register via I2C
  */
-static int bmp390_read_bytes(uint8_t reg_addr, uint8_t *buf, uint8_t len)
+VKTE_WEAK int bmp390_read_bytes(uint8_t reg_addr, uint8_t *buf, uint8_t len)
 {
     // TODO: Replace with HAL_I2C_Mem_Read(&hi2c1, BMP390_I2C_ADDR<<1, reg_addr,
     //                                       I2C_MEMADD_SIZE_8BIT, buf, len, 1000);

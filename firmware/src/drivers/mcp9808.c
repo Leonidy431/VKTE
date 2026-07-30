@@ -12,6 +12,14 @@
 #include "stm32h7xx.h"
 #include "mcp9808.h"
 
+/* I/O hooks are weak so host unit tests can override them with simulators;
+ * HAL integration replaces the default bodies. */
+#if defined(__GNUC__)
+#define VKTE_WEAK __attribute__((weak))
+#else
+#define VKTE_WEAK
+#endif
+
 #define MCP9808_I2C_ADDR           0x60
 #define MCP9808_CONFIG             0x01
 #define MCP9808_UPPER_TEMP         0x02
@@ -25,22 +33,22 @@
 static int mcp9808_initialized = 0;
 
 // I2C communication wrappers
-static uint8_t mcp9808_read_byte(uint8_t reg)
+VKTE_WEAK uint8_t mcp9808_read_byte(uint8_t reg)
 {
     uint8_t data = 0;
     // TODO: HAL_I2C_Mem_Read(&hi2c1, MCP9808_I2C_ADDR<<1, reg, I2C_MEMADD_SIZE_8BIT, &data, 1, 1000);
     return data;
 }
 
-static int mcp9808_read_word(uint8_t reg, uint16_t *data)
+VKTE_WEAK int mcp9808_read_word(uint8_t reg, uint16_t *data)
 {
-    uint8_t buf[2];
+    uint8_t buf[2] = {0, 0};
     // TODO: HAL_I2C_Mem_Read(&hi2c1, MCP9808_I2C_ADDR<<1, reg, I2C_MEMADD_SIZE_8BIT, buf, 2, 1000);
     *data = ((uint16_t)buf[0] << 8) | buf[1];
     return 0;
 }
 
-static int mcp9808_write_byte(uint8_t reg, uint8_t val)
+VKTE_WEAK int mcp9808_write_byte(uint8_t reg, uint8_t val)
 {
     // TODO: HAL_I2C_Mem_Write(&hi2c1, MCP9808_I2C_ADDR<<1, reg, I2C_MEMADD_SIZE_8BIT, &val, 1, 1000);
     return 0;

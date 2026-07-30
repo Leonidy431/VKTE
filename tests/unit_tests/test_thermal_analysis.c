@@ -52,6 +52,14 @@ int main(void)
     check(fabsf(thermal_predict_shift(&model, 60.0f) - 20.0f) < 1e-2f,
           "predicts 20 mm shift at 60 degC");
 
+    /* Fewer than 2 points: rejected before any fitting is attempted. */
+    float one_t[] = {20.0f};
+    float one_s[] = {0.0f};
+    check(thermal_fit_poi_shift(&model, one_t, one_s, 1) == -1,
+          "rejects fewer than 2 data points");
+    check(thermal_fit_poi_shift(&model, one_t, one_s, 0) == -1,
+          "rejects zero data points");
+
     /* Degenerate: constant temperature must be rejected. */
     float flat_t[] = {50.0f, 50.0f, 50.0f};
     float flat_s[] = {1.0f, 2.0f, 3.0f};
@@ -62,6 +70,20 @@ int main(void)
     const uint8_t check_vec[] = "123456789";
     uint32_t crc = compute_crc32(check_vec, 9);
     check(crc == 0xCBF43926u, "CRC32 matches standard check value");
+
+    /* thermal_model_init: zeroes the fit, keeps the caller's baseline */
+    ThermalModel init_model;
+    init_model.poi_shift_per_degree = 99.0f;
+    init_model.grouping_degradation = 99.0f;
+    thermal_model_init(&init_model, 22.5f);
+    check(init_model.baseline_temp_c == 22.5f, "model_init sets baseline_temp_c");
+    check(init_model.poi_shift_per_degree == 0.0f, "model_init clears poi_shift_per_degree");
+    check(init_model.grouping_degradation == 0.0f, "model_init clears grouping_degradation");
+
+    /* thermal_check_warning: threshold at THERMAL_WARNING_TEMP_C (180 C) */
+    check(thermal_check_warning(179.9f) == 0, "check_warning clear below threshold");
+    check(thermal_check_warning(180.0f) == 1, "check_warning fires at threshold");
+    check(thermal_check_warning(220.0f) == 1, "check_warning fires above threshold");
 
     printf("\nSummary: %d passed, %d failed\n", passed, failed);
     return failed == 0 ? 0 : 1;

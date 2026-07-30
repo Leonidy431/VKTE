@@ -22,6 +22,14 @@
 #include "stm32h7xx.h"
 #include "vl53l0x.h"
 
+/* I/O hooks are weak so host unit tests can override them with simulators;
+ * HAL integration replaces the default bodies. */
+#if defined(__GNUC__)
+#define VKTE_WEAK __attribute__((weak))
+#else
+#define VKTE_WEAK
+#endif
+
 // ============================================================================
 // Register Definitions
 // ============================================================================
@@ -76,7 +84,7 @@ static struct {
  * Read single byte from register via I2C
  * Returns: Register value (0-255)
  */
-static uint8_t vl53l0x_read_byte(uint8_t reg_addr)
+VKTE_WEAK uint8_t vl53l0x_read_byte(uint8_t reg_addr)
 {
     uint8_t data = 0;
     // TODO: Replace with HAL_I2C_Mem_Read(&hi2c1, VL53L0X_I2C_ADDR<<1, reg_addr,
@@ -88,7 +96,7 @@ static uint8_t vl53l0x_read_byte(uint8_t reg_addr)
  * Write single byte to register via I2C
  * Returns: 0 on success, -1 on error
  */
-static int vl53l0x_write_byte(uint8_t reg_addr, uint8_t value)
+VKTE_WEAK int vl53l0x_write_byte(uint8_t reg_addr, uint8_t value)
 {
     // TODO: Replace with HAL_I2C_Mem_Write(&hi2c1, VL53L0X_I2C_ADDR<<1, reg_addr,
     //                                        I2C_MEMADD_SIZE_8BIT, &value, 1, 1000);
@@ -99,7 +107,7 @@ static int vl53l0x_write_byte(uint8_t reg_addr, uint8_t value)
  * Read multiple bytes from register via I2C
  * Returns: Number of bytes read
  */
-static int vl53l0x_read_bytes(uint8_t reg_addr, uint8_t *buf, uint8_t len)
+VKTE_WEAK int vl53l0x_read_bytes(uint8_t reg_addr, uint8_t *buf, uint8_t len)
 {
     // TODO: Replace with HAL_I2C_Mem_Read(&hi2c1, VL53L0X_I2C_ADDR<<1, reg_addr,
     //                                       I2C_MEMADD_SIZE_8BIT, buf, len, 1000);
@@ -110,7 +118,7 @@ static int vl53l0x_read_bytes(uint8_t reg_addr, uint8_t *buf, uint8_t len)
  * Write multiple bytes to register via I2C
  * Returns: 0 on success
  */
-static int vl53l0x_write_bytes(uint8_t reg_addr, uint8_t *buf, uint8_t len)
+VKTE_WEAK int vl53l0x_write_bytes(uint8_t reg_addr, uint8_t *buf, uint8_t len)
 {
     // TODO: Replace with HAL_I2C_Mem_Write(&hi2c1, VL53L0X_I2C_ADDR<<1, reg_addr,
     //                                        I2C_MEMADD_SIZE_8BIT, buf, len, 1000);

@@ -6,6 +6,13 @@ set(CMAKE_C_STANDARD 99)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wpedantic -O2 -g3")
 
+# ============ Coverage Instrumentation (host tests only) ============
+option(ENABLE_COVERAGE "Build host tests with gcov instrumentation" OFF)
+if(ENABLE_COVERAGE AND NOT CMAKE_SYSTEM_NAME MATCHES "Generic")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage -O0")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
+endif()
+
 # ============ ARM Toolchain Settings ============
 if(CMAKE_SYSTEM_NAME MATCHES "Generic")
     set(CMAKE_C_COMPILER "arm-none-eabi-gcc")
@@ -61,11 +68,119 @@ if(BUILD_TESTS AND NOT CMAKE_SYSTEM_NAME MATCHES "Generic")
     )
     target_link_libraries(test_shot_assembler m)
 
+    # Test: Robust thermal drift fitting (Huber loss / IRLS, pure logic)
+    add_executable(test_thermal_robust
+        tests/unit_tests/test_thermal_robust.c
+        firmware/src/data_fusion/thermal_robust.c
+    )
+    target_link_libraries(test_thermal_robust m)
+
+    # Test: Real-time anomaly detector (EWMA / 3-sigma, pure logic)
+    add_executable(test_anomaly_detector
+        tests/unit_tests/test_anomaly_detector.c
+        firmware/src/data_fusion/anomaly_detector.c
+    )
+    target_link_libraries(test_anomaly_detector m)
+
+    # Test: Shot-record ring buffer + CRC32 + Flash flush
+    add_executable(test_session_log
+        tests/unit_tests/test_session_log.c
+        firmware/src/storage/session_log.c
+    )
+    target_link_libraries(test_session_log m)
+
+    # Test: M7<->M4 IPC ring buffer
+    add_executable(test_m4_ipc
+        tests/unit_tests/test_m4_ipc.c
+        firmware/src/m4_core.c
+    )
+    target_link_libraries(test_m4_ipc m)
+
+    # Test: Sensor drivers (ICM-20689, VL53L0X, MCP9808, BMP390) via
+    # register-level simulators overriding each driver's weak I/O hooks
+    add_executable(test_sensor_drivers
+        tests/unit_tests/test_sensor_drivers.c
+        firmware/src/drivers/icm20689.c
+        firmware/src/drivers/vl53l0x.c
+        firmware/src/drivers/mcp9808.c
+        firmware/src/drivers/bmp390.c
+    )
+    target_link_libraries(test_sensor_drivers m)
+
+    # Test: Memory drivers (AT24C256C EEPROM, W25Q128JV QSPI Flash)
+    add_executable(test_memory_drivers
+        tests/unit_tests/test_memory_drivers.c
+        firmware/src/drivers/at24c256c.c
+        firmware/src/drivers/w25q128jv.c
+    )
+    target_link_libraries(test_memory_drivers m)
+
+    # Test: IWDG/WWDG watchdogs, via mmap-backed fixed register addresses
+    add_executable(test_watchdog
+        tests/unit_tests/test_watchdog.c
+        firmware/src/drivers/watchdog.c
+    )
+    target_link_libraries(test_watchdog m)
+
+    # Test: Session manager (circular Flash session storage)
+    add_executable(test_session_manager
+        tests/unit_tests/test_session_manager.c
+        firmware/src/session_manager.c
+    )
+    target_link_libraries(test_session_manager m)
+
+    # Test: Manufacturing PAT orchestration
+    add_executable(test_manufacturing_test
+        tests/unit_tests/test_manufacturing_test.c
+        firmware/src/manufacturing_test.c
+    )
+    target_link_libraries(test_manufacturing_test m)
+
+    # Companion to test_manufacturing_test: links manufacturing_test.c
+    # WITHOUT overriding the weak pat_test_* subtests, so their own
+    # (currently placeholder) bodies get covered too -- the other binary's
+    # overrides replace those bodies for its own link, to exercise the
+    # orchestrator's PAT_FAIL branches instead. gcov/gcovr merge both.
+    add_executable(test_manufacturing_test_defaults
+        tests/unit_tests/test_manufacturing_test_defaults.c
+        firmware/src/manufacturing_test.c
+    )
+    target_link_libraries(test_manufacturing_test_defaults m)
+
+    # Companion to test_sensor_drivers/test_memory_drivers/test_session_manager:
+    # links the same driver sources WITHOUT overriding their weak low-level
+    # I/O hooks, so the hooks' own (currently placeholder) default bodies
+    # get covered too -- the other binaries' overrides replace those bodies
+    # for their own links, to exercise realistic init/read/write logic
+    # instead. gcov/gcovr merge all of them.
+    add_executable(test_drivers_defaults
+        tests/unit_tests/test_drivers_defaults.c
+        firmware/src/drivers/icm20689.c
+        firmware/src/drivers/vl53l0x.c
+        firmware/src/drivers/mcp9808.c
+        firmware/src/drivers/bmp390.c
+        firmware/src/drivers/at24c256c.c
+        firmware/src/drivers/w25q128jv.c
+        firmware/src/session_manager.c
+    )
+    target_link_libraries(test_drivers_defaults m)
+
     # Enable CTest
     enable_testing()
     add_test(NAME KalmanFilter COMMAND test_kalman_filter)
     add_test(NAME ThermalAnalysis COMMAND test_thermal_analysis)
     add_test(NAME ShotAssembler COMMAND test_shot_assembler)
+    add_test(NAME ThermalRobust COMMAND test_thermal_robust)
+    add_test(NAME AnomalyDetector COMMAND test_anomaly_detector)
+    add_test(NAME SessionLog COMMAND test_session_log)
+    add_test(NAME M4IpcRing COMMAND test_m4_ipc)
+    add_test(NAME SensorDrivers COMMAND test_sensor_drivers)
+    add_test(NAME MemoryDrivers COMMAND test_memory_drivers)
+    add_test(NAME Watchdog COMMAND test_watchdog)
+    add_test(NAME SessionManager COMMAND test_session_manager)
+    add_test(NAME ManufacturingTest COMMAND test_manufacturing_test)
+    add_test(NAME ManufacturingTestDefaults COMMAND test_manufacturing_test_defaults)
+    add_test(NAME DriversDefaults COMMAND test_drivers_defaults)
 
     message(STATUS "Tests enabled. Run 'ctest' or 'make test' to execute.")
 endif()

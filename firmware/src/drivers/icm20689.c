@@ -20,6 +20,14 @@
 #include "stm32h7xx.h"
 #include "icm20689.h"
 
+/* I/O hooks are weak so host unit tests can override them with simulators;
+ * HAL integration replaces the default bodies. */
+#if defined(__GNUC__)
+#define VKTE_WEAK __attribute__((weak))
+#else
+#define VKTE_WEAK
+#endif
+
 // Register definitions
 #define ICM20689_WHO_AM_I           0x75
 #define ICM20689_ACCEL_XOUT_H       0x3B
@@ -53,7 +61,7 @@ static struct {
  * Read single register via SPI
  * Returns: Register value (0-255)
  */
-static uint8_t icm20689_read_reg(uint8_t reg_addr)
+VKTE_WEAK uint8_t icm20689_read_reg(uint8_t reg_addr)
 {
     uint8_t tx_buf[2] = {ICM20689_SPI_READ | reg_addr, 0};
     uint8_t rx_buf[2] = {0};
@@ -68,7 +76,7 @@ static uint8_t icm20689_read_reg(uint8_t reg_addr)
  * Write single register via SPI
  * Returns: 0 on success, -1 on timeout
  */
-static int icm20689_write_reg(uint8_t reg_addr, uint8_t value)
+VKTE_WEAK int icm20689_write_reg(uint8_t reg_addr, uint8_t value)
 {
     uint8_t tx_buf[2] = {ICM20689_SPI_WRITE | reg_addr, value};
 
@@ -82,7 +90,7 @@ static int icm20689_write_reg(uint8_t reg_addr, uint8_t value)
  * Read multiple registers (burst read)
  * Returns: Number of bytes read, or -1 on error
  */
-static int icm20689_read_burst(uint8_t start_reg, uint8_t *buf, uint8_t len)
+VKTE_WEAK int icm20689_read_burst(uint8_t start_reg, uint8_t *buf, uint8_t len)
 {
     // First byte: read command + start register
     uint8_t cmd = ICM20689_SPI_READ | start_reg;
@@ -132,9 +140,15 @@ int icm20689_init(void)
     icm20689_write_reg(ICM20689_CONFIG, 0x04);
 
     // Accelerometer range: ±16g (register value = 0x18)
-    // LSB = 2000 mg / 32768 = 0.061 mg/LSB = 0.000061 g/LSB
+    // LSB = 16000 mg / 32768 = 0.488 mg/LSB = 0.000488 g/LSB
+    // (Must match the case-3 entry in icm20689_set_accel_range()'s table --
+    // this previously used the ±2g divisor (2000) while configuring the
+    // hardware for ±16g, under-reporting real acceleration by 8x on every
+    // reading taken before the first explicit set_accel_range() call. That
+    // silently hid true recoil magnitude from the 18g critical overpressure
+    // check in anomaly_detector.c.)
     icm20689_write_reg(ICM20689_ACCEL_CONFIG, 0x18);
-    icm20689_state.accel_scale = 32768.0 / 2000.0;  // LSB per g
+    icm20689_state.accel_scale = 32768.0 / 16000.0;  // LSB per milli-g at +/-16g
 
     // Accelerometer DLPF: 20 Hz (same as main DLPF)
     icm20689_write_reg(ICM20689_ACCEL_CONFIG_2, 0x04);
