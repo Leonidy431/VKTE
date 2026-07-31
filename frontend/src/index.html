@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>VKTE HUD</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<style>
+  /*
+   * Combiner-HUD frontend (Path A from docs/RESEARCH_HUD_GLASS_TOP3.md).
+   * Renders full-screen on the CM4-driven DLP projector; the projected
+   * image reflects off a combiner/windshield, so text must read correctly
+   * in that reflection — see #mirrorToggle below (CSS scaleX(-1)).
+   */
+  :root {
+    --green: #00ff64;
+    --amber: #ffc800;
+    --red: #ff3232;
+    --bg: #000;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: var(--bg); color: var(--green);
+    font-family: "Courier New", monospace;
+    overflow: hidden; user-select: none;
+  }
+  #stage {
+    position: relative; width: 100vw; height: 100vh;
+    transition: transform 0.15s ease;
+  }
+  #stage.mirrored { transform: scaleX(-1); }
+  #hud { position: absolute; inset: 0; display: block; }
+
+  /* On-screen controls (parking-mode touch panel per RESEARCH_HUD_GLASS_TOP3.md
+     "Управление кнопками": duplicates keyboard bindings as large touch targets).
+     Stays screen-normal even when #stage is mirrored, so it must sit OUTSIDE
+     #stage in the DOM (see body layout below) and get counter-mirrored only
+     if the whole page is physically flipped at the panel level, not here. */
+  #controls {
+    position: fixed; right: 12px; bottom: 12px; z-index: 10;
+    display: flex; gap: 8px; flex-wrap: wrap; max-width: 40vw;
+  }
+  #controls button {
+    background: #001a08; color: var(--green); border: 2px solid var(--green);
+    font-family: inherit; font-size: 14px; padding: 14px 18px; border-radius: 6px;
+    min-width: 64px; min-height: 56px; opacity: 0.55;
+  }
+  #controls button:active { opacity: 1; background: #003010; }
+  #controls button.danger { color: var(--red); border-color: var(--red); }
+
+  #connStatus {
+    position: fixed; left: 12px; top: 12px; z-index: 10;
+    font-size: 12px; padding: 4px 10px; border-radius: 4px; opacity: 0.7;
+    border: 1px solid currentColor;
+  }
+  #connStatus.ok { color: var(--green); }
+  #connStatus.retrying { color: var(--amber); }
+  #connStatus.down { color: var(--red); }
+
+  #settings {
+    position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,0.92);
+    display: none; align-items: center; justify-content: center;
+  }
+  #settings.open { display: flex; }
+  #settings form {
+    border: 1px solid var(--green); padding: 24px; display: grid; gap: 12px;
+    min-width: 320px;
+  }
+  #settings label { font-size: 12px; }
+  #settings input {
+    background: #000; color: var(--green); border: 1px solid var(--green);
+    font-family: inherit; padding: 8px; width: 100%;
+  }
+  #settings button[type=submit] {
+    background: #001a08; color: var(--green); border: 2px solid var(--green);
+    padding: 10px; font-family: inherit; cursor: pointer;
+  }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <canvas id="hud"></canvas>
+  </div>
+
+  <div id="connStatus" class="down">WS: offline</div>
+
+  <!-- Parking-mode touch panel; duplicates the keyboard bindings below 1:1
+       (RESEARCH_HUD_GLASS_TOP3.md: "Тач/мышь — те же действия ... стояночный режим"). -->
+  <div id="controls">
+    <button data-action="mode">M — режим</button>
+    <button data-action="bright-down">− ярк.</button>
+    <button data-action="bright-up">+ ярк.</button>
+    <button data-action="bubbles">B — пузыри</button>
+    <button data-action="mirror">Mirror</button>
+    <button data-action="settings">⚙</button>
+    <button data-action="laser-stop" class="danger">ESC — STOP</button>
+  </div>
+
+  <div id="settings">
+    <form id="settingsForm">
+      <label>Backend URL (http/https)
+        <input id="cfgBase" placeholder="http://vkte.local:8000" required>
+      </label>
+      <label>API key (Bearer)
+        <input id="cfgKey" placeholder="sk-vkte-dev-change-in-production" required>
+      </label>
+      <button type="submit">Сохранить и подключиться</button>
+    </form>
+  </div>
+
+<script>
+"use strict";
+
+/* ---------------------------------------------------------------------
+ * Config: persisted in localStorage, edited via the #settings overlay
+ * (⚙ button or first run with nothing saved).
+ * ------------------------------------------------------------------- */
+const CONFIG_KEY = "vkte_hud_config";
+
+function loadConfig() {
+  try {
+    const raw = localStorage.getItem(CONFIG_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) { /* corrupt localStorage, fall through to defaults */ }
+  return { base: "http://localhost:8000", apiKey: "sk-vkte-dev-change-in-production", mirrored: true };
+}
+
+function saveConfig(cfg) {
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
+}
+
+let config = loadConfig();
+
+function wsUrl() {
+  const httpBase = config.base.replace(/\/$/, "");
+  return httpBase.replace(/^http/, "ws") + "/ws/telemetry";
+}
+
+function apiHeaders() {
+  return {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + config.apiKey,
+  };
+}
+
+async function apiPost(path, body) {
+  try {
+    const res = await fetch(config.base.replace(/\/$/, "") + path, {
+      method: "POST",
+      headers: apiHeaders(),
+      body: JSON.stringify(body || {}),
+    });
+    if (!res.ok) console.warn("API error", path, res.status);
+    return res;
+  } catch (e) {
+    console.warn("API unreachable", path, e);
+  }
+}
+
+/* ---------------------------------------------------------------------
+ * WebSocket telemetry client with reconnect (Sprint 4 backlog item:
+ * "WebSocket reconnect logic"). Exponential backoff capped at 10s, with
+ * jitter so a fleet of units reconnecting after a network blip doesn't
+ * hammer the backend in lockstep.
+ * ------------------------------------------------------------------- */
+let ws = null;
+let reconnectAttempt = 0;
+let reconnectTimer = null;
+let latestTelemetry = null;
+
+function setConnStatus(state, text) {
+  const el = document.getElementById("connStatus");
+  el.className = state;
+  el.textContent = "WS: " + text;
+}
+
+function connectWebSocket() {
+  clearTimeout(reconnectTimer);
+  setConnStatus(reconnectAttempt === 0 ? "retrying" : "retrying",
+    reconnectAttempt === 0 ? "connecting…" : `reconnecting (attempt ${reconnectAttempt})…`);
+
+  try {
+    ws = new WebSocket(wsUrl());
+  } catch (e) {
+    scheduleReconnect();
+    return;
+  }
+
+  ws.onopen = () => {
+    reconnectAttempt = 0;
+    setConnStatus("ok", "connected");
+  };
+
+  ws.onmessage = (event) => {
+    try {
+      latestTelemetry = JSON.parse(event.data);
+    } catch (e) {
+      console.warn("bad telemetry frame", e);
+    }
+  };
+
+  ws.onerror = () => {
+    // onclose fires right after; reconnect scheduling happens there.
+  };
+
+  ws.onclose = () => {
+    setConnStatus("down", "disconnected");
+    scheduleReconnect();
+  };
+}
+
+function scheduleReconnect() {
+  reconnectAttempt += 1;
+  const base = Math.min(10000, 500 * Math.pow(2, reconnectAttempt)); // cap 10s
+  const jitter = Math.random() * 300;
+  reconnectTimer = setTimeout(connectWebSocket, base + jitter);
+}
+
+/* ---------------------------------------------------------------------
+ * HUD rendering — mirrors the layout logic in
+ * backend/app/modules/volumetric/hud_renderer.py so the frontend and the
+ * backend's own frame metadata stay conceptually in sync (mode names,
+ * color thresholds). This canvas is the actual pixels; the backend's
+ * render_frame() call is only used for its metadata (frame count, alarms)
+ * over the /api/v1/hud/render endpoint when local telemetry is pushed
+ * from a sensor bridge — this file focuses on the always-on live
+ * dashboard view of whatever telemetry is flowing over the websocket.
+ * ------------------------------------------------------------------- */
+const canvas = document.getElementById("hud");
+const ctx = canvas.getContext("2d");
+
+const COLOR_PRIMARY = "#00ff64";
+const COLOR_WARNING = "#ffc800";
+const COLOR_ALARM = "#ff3232";
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+let currentMode = "debug"; // land | marine | debug — driven by keyboard/touch, see cycleMode()
+
+function drawText(text, x, y, size, color, align) {
+  ctx.fillStyle = color;
+  ctx.font = `bold ${size}px 'Courier New', monospace`;
+  ctx.textAlign = align || "left";
+  ctx.fillText(text, x, y);
+}
+
+function renderFrame() {
+  const w = canvas.width, h = canvas.height;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, w, h);
+
+  const t = latestTelemetry;
+  if (!t) {
+    drawText("НЕТ ТЕЛЕМЕТРИИ", w / 2, h / 2, Math.round(h * 0.05), COLOR_WARNING, "center");
+    requestAnimationFrame(renderFrame);
+    return;
+  }
+
+  const bubbles = t.bubbles || {};
+  const laser = t.laser || {};
+  const hud = t.hud || {};
+  const render = t.render || {};
+
+  if (currentMode === "land") {
+    drawText(`LAND MODE`, 30, 40, Math.round(h * 0.03), COLOR_PRIMARY);
+    drawText(`LASER: ${laser.power_w ?? "--"} W  ${laser.mode ?? ""}`, 30, h - 60, Math.round(h * 0.035), COLOR_PRIMARY);
+  } else if (currentMode === "marine") {
+    drawText(`MARINE MODE`, 30, 40, Math.round(h * 0.03), COLOR_PRIMARY);
+    drawText(`BUBBLE DENSITY: ${(bubbles.density_percent ?? 0).toFixed(1)}%`, 30, h - 60, Math.round(h * 0.035), COLOR_PRIMARY);
+  } else {
+    // debug: show everything at once
+    const lines = [
+      `MODE: DEBUG`,
+      `Laser: ${laser.power_w ?? "--"} W, ${laser.mode ?? "--"}, scanning=${laser.scanning ?? "--"}`,
+      `Bubbles: running=${bubbles.running ?? "--"}, density=${(bubbles.density_percent ?? 0).toFixed(1)}%, regime=${bubbles.stability_regime ?? "--"}`,
+      `Render: frame=${render.frame ?? "--"}, active_voxels=${render.active_voxels ?? "--"}`,
+      `HUD: brightness=${hud.brightness_percent ?? "--"}%, mode=${hud.mode ?? "--"}`,
+    ];
+    lines.forEach((line, i) => drawText(line, 30, 50 + i * Math.round(h * 0.045), Math.round(h * 0.03), COLOR_PRIMARY));
+  }
+
+  requestAnimationFrame(renderFrame);
+}
+requestAnimationFrame(renderFrame);
+
+/* ---------------------------------------------------------------------
+ * Button controls — physical-button-first per RESEARCH_HUD_GLASS_TOP3.md
+ * ("Combiner ... кнопки вслепую"). Keyboard bindings are what a real
+ * steering-wheel/dash button pad emits over USB/BT HID; the on-screen
+ * buttons duplicate them for parking-mode / bring-up without hardware.
+ * ------------------------------------------------------------------- */
+function cycleMode() {
+  currentMode = { land: "marine", marine: "debug", debug: "land" }[currentMode];
+  apiPost("/api/v1/hud/mode", { mode: currentMode });
+}
+
+let brightness = 100;
+function adjustBrightness(delta) {
+  brightness = Math.max(0, Math.min(100, brightness + delta));
+  apiPost("/api/v1/hud/brightness", { percent: brightness });
+}
+
+let bubblesOn = false;
+function toggleBubbles() {
+  bubblesOn = !bubblesOn;
+  if (bubblesOn) {
+    apiPost("/api/v1/bubble/start", { frequency_hz: 40000, duty_cycle: 0.5 });
+  } else {
+    apiPost("/api/v1/bubble/stop", {});
+  }
+}
+
+function toggleMirror() {
+  config.mirrored = !config.mirrored;
+  saveConfig(config);
+  applyMirror();
+}
+
+function applyMirror() {
+  document.getElementById("stage").classList.toggle("mirrored", !!config.mirrored);
+}
+
+function emergencyLaserStop() {
+  // Laser power to 0 is the safe-state; there is no dedicated /stop route,
+  // so this mirrors the backend's own shutdown() semantics (set_power(0)).
+  apiPost("/api/v1/laser/power", { power_w: 0 });
+}
+
+function handleAction(action) {
+  switch (action) {
+    case "mode": cycleMode(); break;
+    case "bright-up": adjustBrightness(+10); break;
+    case "bright-down": adjustBrightness(-10); break;
+    case "bubbles": toggleBubbles(); break;
+    case "mirror": toggleMirror(); break;
+    case "settings": openSettings(); break;
+    case "laser-stop": emergencyLaserStop(); break;
+  }
+}
+
+document.getElementById("controls").addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-action]");
+  if (btn) handleAction(btn.dataset.action);
+});
+
+const KEY_BINDINGS = {
+  "m": "mode", "M": "mode",
+  "+": "bright-up", "=": "bright-up",
+  "-": "bright-down", "_": "bright-down",
+  "b": "bubbles", "B": "bubbles",
+  "Escape": "laser-stop",
+};
+window.addEventListener("keydown", (e) => {
+  const action = KEY_BINDINGS[e.key];
+  if (action) { e.preventDefault(); handleAction(action); }
+});
+
+/* ---------------------------------------------------------------------
+ * Settings overlay
+ * ------------------------------------------------------------------- */
+function openSettings() {
+  document.getElementById("cfgBase").value = config.base;
+  document.getElementById("cfgKey").value = config.apiKey;
+  document.getElementById("settings").classList.add("open");
+}
+
+document.getElementById("settingsForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  config.base = document.getElementById("cfgBase").value.trim();
+  config.apiKey = document.getElementById("cfgKey").value.trim();
+  saveConfig(config);
+  document.getElementById("settings").classList.remove("open");
+  reconnectAttempt = 0;
+  if (ws) ws.close();
+  connectWebSocket();
+});
+
+/* ---------------------------------------------------------------------
+ * Boot
+ * ------------------------------------------------------------------- */
+applyMirror();
+if (!localStorage.getItem(CONFIG_KEY)) {
+  openSettings();
+} else {
+  connectWebSocket();
+}
+</script>
+</body>
+</html>

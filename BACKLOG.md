@@ -18,31 +18,37 @@
   - мёртвые validate_finite-валидаторы удалены (Pydantic v2 ge/le уже режет NaN/Inf)
 - [x] PEP8: black + flake8 clean (line length 100)
 - [x] PCB: распиновка и посадочные места (docs/PCB_PINOUT_DESIGN.md), питание и тепло (docs/POWER_THERMAL_DESIGN.md)
+- [x] Исследование по научным статьям: проекция на стекло + кнопочное управление, отбор 3 путей по 48 параметрам (docs/RESEARCH_HUD_GLASS_TOP3.md); Путь A (combiner-HUD) — победитель, 216/240
+- [x] Frontend Фаза 4–5: `frontend/src/index.html` — canvas HUD-рендер (land/marine/debug), mirror mode для проекции на комбайнер, кнопочное + клавиатурное управление, вызовы `/api/v1/*` с Bearer
+- [x] WebSocket reconnect logic (Sprint 4) — экспоненциальный backoff с джиттером в frontend, статус-индикатор соединения
+- [x] KiCad старт: carrier-плата + задняя панель (hardware/kicad/), ТЗ по 12 фазам (docs/TZ_ENCLOSURE_CONNECTORS.md), Фазы 1–3 закрыты, Фаза 4 в работе
 
 ## Sprint 3 (Performance & Monitoring) — не сделано
 
 - [ ] C1: Voxel budget management — лимит активных вокселей на кадр в VolumetricRenderer (бюджет из расчёта скорости галво: 500 мкс/точка → ~66 вокселей на кадр при 30 FPS; сейчас грид 100³ рисуется без бюджета)
 - [ ] C2: Hilbert curve scan path — планировщик траектории галво (минимизация переездов между вокселями vs наивный порядок)
 - [ ] D1: Prometheus metrics — prometheus-client уже в requirements, экспортёр не подключён (/metrics эндпоинт: FPS, латентность, плотность пузырьков, температуры)
-- [ ] D1: Real-time dashboard (frontend/src пуст — см. ниже)
+- [ ] D1: Real-time dashboard — базовый canvas-дашборд теперь есть во frontend/src/index.html (debug-режим показывает все каналы разом); полноценные графики/история — ещё нет
 
-## Sprint 4 (Features & Polish) — не сделано
+## Sprint 4 (Features & Polish) — частично сделано
 
-- [ ] Adaptive brightness — автояркость HUD по датчику освещённости (фотодиод на I2C, см. PCB_PINOUT_DESIGN.md)
-- [ ] WebSocket reconnect logic — на стороне frontend (когда появится)
+- [x] WebSocket reconnect logic — см. выше
+- [ ] Adaptive brightness — автояркость HUD по датчику освещённости (фотодиод на I2C, разъём J12 в hardware/kicad/vkte_carrier уже заложен, прошивки/эндпоинта пока нет)
 - [ ] API versioning framework — сейчас префикс /api/v1 захардкожен; вынести в роутеры
 - [ ] Database persistence layer — история телеметрии (SQLite для прототипа, TimescaleDB для прод)
 
 ## Аппаратная часть (новое, по переписке)
 
-- [ ] **KiCad: несущая плата (carrier) + разъёмы под выбранные стандартные платы** — начато: `hardware/kicad/` (см. hardware/kicad/README.md)
-- [ ] **Корпус: панели и посадка стандартных плат** — ТЗ по 12 фазам: docs/TZ_ENCLOSURE_CONNECTORS.md; фазы 4+ (детальный дизайн панелей, DXF/STEP) — в работе
+- [x] **KiCad: несущая плата (carrier) + разъёмы под выбранные стандартные платы** — rev 0.1 в `hardware/kicad/` (см. hardware/kicad/README.md); официальные футпринты DF40/LVDS — Фаза 4 продолжение
+- [ ] **Корпус: панели и посадка стандартных плат** — ТЗ по 12 фазам: docs/TZ_ENCLOSURE_CONNECTORS.md; задняя панель rev 0.1 готова, передняя панель и 3D-корпус — Фаза 4 продолжение
 - [ ] Прошивка thermal throttling (пороги из POWER_THERMAL_DESIGN.md: лазер 60/80°C, TRIAC 65/85°C)
 - [ ] Драйверы реального железа: pyserial → Steminc (RS-485/Modbus RTU), XY2-100 → Cambridge 6215H (SPI)
 
 ## Инфраструктура — не сделано
 
-- [ ] frontend/ — каталог существует, но пуст (src без файлов): React UI, WebSocket-телеметрия, панель управления
+- [x] frontend/ — базовый combiner-HUD клиент есть (frontend/src/index.html); React/сборка — не потребовались (single-file осознанный выбор, см. frontend/README.md)
+- [ ] Физический кнопочный пульт (USB/BT HID) вместо клавиатурных биндингов — hardware TODO
+- [ ] Kiosk-режим автозапуска на CM4 (systemd + chromium --kiosk)
 - [ ] GitHub Actions CI: pytest + coverage gate (85% минимум; фактически держим 100%) + black --check + flake8
 - [ ] Docker image для production (multi-stage, non-root)
 - [ ] SECURITY: сменить дефолтный API_KEY через env перед любым деплоем (sk-vkte-dev-change-in-production)
@@ -58,4 +64,4 @@
 
 **Создано:** 2026-07-29
 **Обновлено:** 2026-07-31
-**Версия:** 2.0 (актуализация по переписке: аудит, спринты 1–2, тесты 100%, PEP8, старт KiCad)
+**Версия:** 2.1 (+ исследование HUD-проекции/кнопок, frontend combiner-HUD с WS-реконнектом, KiCad rev 0.1)
