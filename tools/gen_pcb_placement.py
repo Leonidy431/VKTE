@@ -26,7 +26,7 @@ NETS = {
     "QSPI_CLK": 6, "QSPI_D0": 7, "QSPI_D1": 8, "QSPI_D2": 9, "QSPI_D3": 10,
     "QSPI_CS": 11, "SPI1_CLK": 12, "SPI1_MOSI": 13, "SPI1_MISO": 14,
     "SPI1_CS_IMU": 15, "I2C1_SCL": 16, "I2C1_SDA": 17, "USB_DP": 18,
-    "USB_DM": 19, "UART2_TX": 20, "UART2_RX": 21, "NRST": 22, "BOOT0": 23,
+    "USB_DM": 19, "UART2_TX": 20, "UART2_RX": 21, "NRST": 22, "BOOT0": 23, "PWR_SW": 24, "PWR_12V_RAW": 25,
 }
 
 
@@ -231,7 +231,7 @@ def header_2xN_h(ref, n_cols, pitch, pad, drill, nets=None):
 
 def barrel_jack(ref):
     pads = [
-        th_pad(ref, 1, 0, 0, 3.0, 1.6, "VCC_12V", shape="rect"),
+        th_pad(ref, 1, 0, 0, 3.0, 1.6, "PWR_12V_RAW", shape="rect"),
         th_pad(ref, 2, 6.1, 0, 3.0, 1.6, "GND"),
         th_pad(ref, 3, 3.0, 4.6, 3.0, 1.6, "GND"),
     ]
@@ -272,23 +272,23 @@ def build_all():
     # --- POWER zone (y 51.5-62), left->right along top edge -----------------
     put(barrel_jack("J1"), "Connector_BarrelJack:BarrelJack_5.5x2.1mm", "J1",
         "12V_IN", 63, 56.5, "12V input, verify footprint vs part", th=True)
-    put(chip2("D1", 2.15, 1.5, 1.8, None, "VCC_12V"), "Diode_SMD:D_SMA", "D1",
-        "1N5819 SMA", 70.5, 56.5, "Reverse polarity Schottky")
-    put(sot23_5("U2", {1: "VCC_12V", 2: "GND", 3: "VCC_12V"}),
-        "Package_TO_SOT_SMD:SOT-23-5", "U2", "TPS62133A", 76.5, 56.5,
+    put(chip2("D1", 2.15, 1.5, 1.8, "PWR_12V_RAW", "VCC_12V"), "Diode_SMD:D_SMA", "D1",
+        "1N5819 SMA", 74, 56.5, "Reverse polarity Schottky")
+    put(sot23_5("U2", {1: "VCC_12V", 2: "GND", 3: "VCC_12V", 5: "PWR_SW"}),
+        "Package_TO_SOT_SMD:SOT-23-5", "U2", "TPS62133A", 78.5, 56.5,
         "Buck 12V->5V; VERIFY package vs ordered part variant")
-    put(chip2("L1", 1.7, 1.2, 3.6, None, "VCC_5V"), "Inductor_SMD:L_4x4mm", "L1",
-        "4.7uH", 82, 56.5, "Buck inductor")
+    put(chip2("L1", 1.7, 1.2, 3.6, "PWR_SW", "VCC_5V"), "Inductor_SMD:L_4x4mm", "L1",
+        "4.7uH", 84, 56.5, "Buck inductor")
     put(chip2("C2", 0.95, 1.0, 1.3, "VCC_5V", "GND"), "Capacitor_SMD:C_0805", "C2",
-        "10uF", 87, 56.5, "5V bulk")
+        "10uF", 89, 56.5, "5V bulk")
     put(sot223("U3", {1: "GND", 2: "VCC_3V3", 3: "VCC_5V"}, "VCC_3V3"),
-        "Package_TO_SOT_SMD:SOT-223", "U3", "LDO_3V3_500mA", 94, 56.5, "3V3 LDO")
+        "Package_TO_SOT_SMD:SOT-223", "U3", "LDO_3V3_500mA", 96, 56.5, "3V3 LDO")
     put(chip2("C14", 0.95, 1.0, 1.3, "VCC_3V3", "GND"), "Capacitor_SMD:C_0805", "C14",
-        "10uF", 100, 56.5, "3V3 bulk")
+        "10uF", 102, 56.5, "3V3 bulk")
     put(sot23_5("U12", {1: "VCC_5V", 2: "GND", 5: "VCC_1V8"}),
-        "Package_TO_SOT_SMD:SOT-23-5", "U12", "LDO_1V8_200mA", 106, 56.5, "1V8 LDO")
+        "Package_TO_SOT_SMD:SOT-23-5", "U12", "LDO_1V8_200mA", 107.5, 56.5, "1V8 LDO")
     put(chip2("C15", 0.95, 1.0, 1.3, "VCC_1V8", "GND"), "Capacitor_SMD:C_0805", "C15",
-        "10uF", 111, 56.5, "1V8 bulk")
+        "10uF", 112, 56.5, "1V8 bulk")
     for ref, net, x, y in (("TP1", "VCC_12V", 115, 54.5), ("TP2", "VCC_5V", 118, 54.5),
                            ("TP3", "VCC_3V3", 121, 54.5), ("TP4", "VCC_1V8", 115, 58.5),
                            ("TP5", "GND", 118, 58.5), ("TP6", "GND", 121, 58.5)):

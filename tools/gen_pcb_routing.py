@@ -36,7 +36,7 @@ NETS = {
     "QSPI_CLK": 6, "QSPI_D0": 7, "QSPI_D1": 8, "QSPI_D2": 9, "QSPI_D3": 10,
     "QSPI_CS": 11, "SPI1_CLK": 12, "SPI1_MOSI": 13, "SPI1_MISO": 14,
     "SPI1_CS_IMU": 15, "I2C1_SCL": 16, "I2C1_SDA": 17, "USB_DP": 18,
-    "USB_DM": 19, "UART2_TX": 20, "UART2_RX": 21, "NRST": 22, "BOOT0": 23,
+    "USB_DM": 19, "UART2_TX": 20, "UART2_RX": 21, "NRST": 22, "BOOT0": 23, "PWR_SW": 24, "PWR_12V_RAW": 25,
 }
 
 W_QSPI = 0.28   # 50R single-ended on L1/L4 over adjacent plane
@@ -367,6 +367,74 @@ def route_signals():
 
 
 # ===========================================================================
+# Power routing (HLD step 7): 12V input -> buck -> 5V rail; LDO drops to the
+# In2 3V3 pour; local 1V8 rail. Heavy copper on F.Cu inside the power zone;
+# rails hand distances off the strict-DRC minimums, verified by the audit.
+# ===========================================================================
+
+def route_power():
+    # Raw 12V: J1 tip -> D1 anode, arcing north around J1's sleeve pad
+    poly("PWR_12V_RAW", "F.Cu", 1.0,
+         [(63, 56.5), (63, 53.6), (71.85, 53.6), (71.85, 56.5)])
+
+    # Protected 12V: D1 cathode -> buck VIN (pin1); EN (pin3) ties to the
+    # same rail through a short B.Cu hop (an F.Cu strap cannot clear both
+    # the VIN riser and the pin2 GND drop in the 0.95mm pin field).
+    poly("VCC_12V", "F.Cu", 0.5, [(76.15, 56.5), (77.55, 56.5), (77.55, 57.8)])
+    poly("VCC_12V", "F.Cu", 0.3, [(79.45, 57.8), (79.45, 58.7)])
+    via("VCC_12V", 79.45, 58.7)
+    poly("VCC_12V", "B.Cu", 0.3, [(79.45, 58.7), (76.15, 58.7), (76.15, 57.4)])
+    via("VCC_12V", 76.15, 57.4)
+    poly("VCC_12V", "F.Cu", 0.3, [(76.15, 57.4), (76.15, 56.5)])
+
+    # Switch node: buck SW (pin5) -> L1 pad1, short and wide
+    poly("PWR_SW", "F.Cu", 0.8,
+         [(77.55, 55.2), (77.55, 54.0), (82.3, 54.0), (82.3, 56.5)])
+
+    # 5V: L1 pad2 -> C2 bulk -> via into the In2 5V pour (north strip)
+    poly("VCC_5V", "F.Cu", 1.0, [(85.7, 56.5), (88.05, 56.5)])
+    poly("VCC_5V", "F.Cu", 0.8, [(88.05, 56.5), (88.05, 55.0)])
+    via("VCC_5V", 88.05, 55.0)
+    poly("GND", "F.Cu", 0.8, [(89.95, 56.5), (89.95, 55.0)])
+    via("GND", 89.95, 55.0)
+
+    # LDO feeds from the 5V pour: U3 pin3, U12 pin1
+    poly("VCC_5V", "F.Cu", 0.8, [(98.3, 59.7), (99.6, 59.7)])
+    via("VCC_5V", 99.6, 59.7)
+    poly("VCC_5V", "F.Cu", 0.5, [(106.55, 57.8), (106.55, 59.2)])
+    via("VCC_5V", 106.55, 59.2)
+
+    # 3V3: U3 pin2 + tab drop south into the In2 3V3 pour (starts y=62)
+    poly("VCC_3V3", "F.Cu", 0.8, [(96, 59.7), (96, 62.8)])
+    via("VCC_3V3", 96, 62.8)
+    poly("VCC_3V3", "F.Cu", 0.8, [(96, 53.3), (92.3, 53.3), (92.3, 62.8)])
+    via("VCC_3V3", 92.3, 62.8)
+    poly("GND", "F.Cu", 0.5, [(93.7, 59.7), (93.7, 61.9)])
+    via("GND", 93.7, 61.9)
+    # C14 3V3 bulk: pad1 south to the pour, pad2 GND drop
+    poly("VCC_3V3", "F.Cu", 0.5, [(101.05, 56.5), (101.05, 62.8)])
+    via("VCC_3V3", 101.05, 62.8)
+    poly("GND", "F.Cu", 0.5, [(102.95, 56.5), (102.95, 55.0)])
+    via("GND", 102.95, 55.0)
+
+    # 1V8 local rail: U12 out -> spine y=53.3 -> C15 bulk + TP4
+    poly("VCC_1V8", "F.Cu", 0.5,
+         [(106.55, 55.2), (106.55, 53.3), (116.5, 53.3), (116.5, 58.5), (115, 58.5)])
+    poly("VCC_1V8", "F.Cu", 0.5, [(111.05, 53.3), (111.05, 56.5)])
+    poly("GND", "F.Cu", 0.5, [(112.95, 56.5), (112.95, 55.0)])
+    via("GND", 112.95, 55.0)
+    poly("GND", "F.Cu", 0.5, [(107.5, 57.8), (107.5, 59.3)])
+    via("GND", 107.5, 59.3)
+    poly("GND", "F.Cu", 0.5, [(78.5, 57.8), (78.5, 59.9)])
+    via("GND", 78.5, 59.9)
+
+    # TP3 3V3 plane tie (TP1 12V tie deferred: 12V copper lives on the far
+    # west; picked up with the B.Cu power distribution pass in KiCad)
+    poly("VCC_3V3", "F.Cu", 0.5, [(121, 54.5), (119.5, 54.5), (119.5, 62.8)])
+    via("VCC_3V3", 119.5, 62.8)
+
+
+# ===========================================================================
 # Geometric self-check ("blind zone" audit)
 # ===========================================================================
 
@@ -529,6 +597,7 @@ def main():
     route_power_fanout()
     route_via_drops()
     route_signals()
+    route_power()
 
     errors = audit()
     if errors:
