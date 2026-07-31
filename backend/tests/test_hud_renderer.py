@@ -156,9 +156,7 @@ class TestHUDRendererFrameRendering:
         renderer = HUDRenderer()
         renderer._render_alarms([])
         non_black_pixels = sum(
-            1 for row in renderer.frame_buffer
-            for pixel in row
-            if pixel != (0, 0, 0)
+            1 for row in renderer.frame_buffer for pixel in row if pixel != (0, 0, 0)
         )
         assert non_black_pixels == 0
 
@@ -169,16 +167,12 @@ class TestHUDRendererFrameRendering:
 
         # First render
         renderer.render_frame(telemetry)
-        # Get a pixel from first frame
-        first_frame_pixel = renderer.frame_buffer[100][100]
 
         # Second render (should clear)
         renderer.render_frame(telemetry)
         # Buffer should be mostly black after clear
         black_count = sum(
-            1 for row in renderer.frame_buffer
-            for pixel in row
-            if pixel == (0, 0, 0)
+            1 for row in renderer.frame_buffer for pixel in row if pixel == (0, 0, 0)
         )
         # Most pixels should be black
         assert black_count > (renderer.DISPLAY_HEIGHT * renderer.DISPLAY_WIDTH * 0.8)
@@ -198,10 +192,7 @@ class TestTelemetryFrame:
     def test_telemetry_frame_marine_values(self):
         """Test TelemetryFrame with marine values."""
         frame = TelemetryFrame(
-            depth_m=30.0,
-            water_temp_c=15.0,
-            pressure_bar=4.0,
-            salinity_ppt=35.0
+            depth_m=30.0, water_temp_c=15.0, pressure_bar=4.0, salinity_ppt=35.0
         )
         assert frame.depth_m == 30.0
         assert frame.water_temp_c == 15.0
@@ -282,7 +273,11 @@ class TestHUDRendererDisplayConstants:
         assert HUDRenderer.FONT_SIZE_LARGE > 0
         assert HUDRenderer.FONT_SIZE_MEDIUM > 0
         assert HUDRenderer.FONT_SIZE_SMALL > 0
-        assert HUDRenderer.FONT_SIZE_LARGE > HUDRenderer.FONT_SIZE_MEDIUM > HUDRenderer.FONT_SIZE_SMALL
+        assert (
+            HUDRenderer.FONT_SIZE_LARGE
+            > HUDRenderer.FONT_SIZE_MEDIUM
+            > HUDRenderer.FONT_SIZE_SMALL
+        )
 
 
 class TestHUDModeEnum:
@@ -314,9 +309,7 @@ class TestHUDRendererLandMode:
 
         # Check that some pixels are drawn
         non_black_pixels = sum(
-            1 for row in renderer.frame_buffer
-            for pixel in row
-            if pixel != (0, 0, 0)
+            1 for row in renderer.frame_buffer for pixel in row if pixel != (0, 0, 0)
         )
         assert non_black_pixels > 0
 
@@ -326,9 +319,7 @@ class TestHUDRendererLandMode:
         telemetry = TelemetryFrame(speed_kmh=150.0)
         renderer.render_frame(telemetry)
         non_black_pixels = sum(
-            1 for row in renderer.frame_buffer
-            for pixel in row
-            if pixel != (0, 0, 0)
+            1 for row in renderer.frame_buffer for pixel in row if pixel != (0, 0, 0)
         )
         assert non_black_pixels > 0
 
@@ -338,9 +329,7 @@ class TestHUDRendererLandMode:
         telemetry = TelemetryFrame(speed_kmh=170.0)
         renderer.render_frame(telemetry)
         non_black_pixels = sum(
-            1 for row in renderer.frame_buffer
-            for pixel in row
-            if pixel != (0, 0, 0)
+            1 for row in renderer.frame_buffer for pixel in row if pixel != (0, 0, 0)
         )
         assert non_black_pixels > 0
 
@@ -382,9 +371,7 @@ class TestHUDRendererMarineMode:
 
         # Check that some pixels are drawn
         non_black_pixels = sum(
-            1 for row in renderer.frame_buffer
-            for pixel in row
-            if pixel != (0, 0, 0)
+            1 for row in renderer.frame_buffer for pixel in row if pixel != (0, 0, 0)
         )
         assert non_black_pixels > 0
 
@@ -408,18 +395,13 @@ class TestHUDRendererDebugMode:
         """Test that debug mode displays all telemetry."""
         renderer = HUDRenderer(mode=HUDMode.DEBUG)
         telemetry = TelemetryFrame(
-            speed_kmh=60.0,
-            depth_m=20.0,
-            engine_temp_c=85.0,
-            water_temp_c=15.0
+            speed_kmh=60.0, depth_m=20.0, engine_temp_c=85.0, water_temp_c=15.0
         )
         renderer.render_frame(telemetry)
 
         # Check that pixels are drawn
         non_black_pixels = sum(
-            1 for row in renderer.frame_buffer
-            for pixel in row
-            if pixel != (0, 0, 0)
+            1 for row in renderer.frame_buffer for pixel in row if pixel != (0, 0, 0)
         )
         assert non_black_pixels > 0
 

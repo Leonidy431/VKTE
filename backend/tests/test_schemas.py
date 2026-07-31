@@ -1,12 +1,16 @@
 """Unit tests for Pydantic request/response schemas."""
 
 import pytest
-import math
 from pydantic import ValidationError
 from app.schemas import (
-    HUDRenderRequest, LaserPowerRequest, HUDBrightnessRequest,
-    HUDModeRequest, RenderObjectRequest, BubbleStartRequest,
-    HealthResponse, HUDRenderResponse
+    HUDRenderRequest,
+    LaserPowerRequest,
+    HUDBrightnessRequest,
+    HUDModeRequest,
+    RenderObjectRequest,
+    BubbleStartRequest,
+    HealthResponse,
+    HUDRenderResponse,
 )
 
 
@@ -26,7 +30,7 @@ class TestHUDRenderRequest:
             speed_kmh=100.0,
             engine_temp_c=95.0,
             battery_voltage_v=13.5,
-            engine_current_a=50.0
+            engine_current_a=50.0,
         )
         assert req.speed_kmh == 100.0
         assert req.engine_current_a == 50.0
@@ -34,10 +38,7 @@ class TestHUDRenderRequest:
     def test_valid_marine_mode(self):
         """Test valid marine mode parameters."""
         req = HUDRenderRequest(
-            depth_m=30.0,
-            water_temp_c=18.0,
-            pressure_bar=4.0,
-            salinity_ppt=35.0
+            depth_m=30.0, water_temp_c=18.0, pressure_bar=4.0, salinity_ppt=35.0
         )
         assert req.depth_m == 30.0
         assert req.water_temp_c == 18.0
@@ -65,17 +66,17 @@ class TestHUDRenderRequest:
     def test_speed_nan_rejected(self):
         """Test that NaN speed is rejected."""
         with pytest.raises(ValidationError):
-            HUDRenderRequest(speed_kmh=float('nan'))
+            HUDRenderRequest(speed_kmh=float("nan"))
 
     def test_speed_inf_rejected(self):
         """Test that infinite speed is rejected."""
         with pytest.raises(ValidationError):
-            HUDRenderRequest(speed_kmh=float('inf'))
+            HUDRenderRequest(speed_kmh=float("inf"))
 
     def test_speed_neg_inf_rejected(self):
         """Test that negative infinite speed is rejected."""
         with pytest.raises(ValidationError):
-            HUDRenderRequest(speed_kmh=float('-inf'))
+            HUDRenderRequest(speed_kmh=float("-inf"))
 
     def test_engine_temp_min_boundary(self):
         """Test engine temperature at minimum boundary."""
@@ -209,12 +210,12 @@ class TestLaserPowerRequest:
     def test_power_nan_rejected(self):
         """Test that NaN power is rejected."""
         with pytest.raises(ValidationError):
-            LaserPowerRequest(power_w=float('nan'))
+            LaserPowerRequest(power_w=float("nan"))
 
     def test_power_inf_rejected(self):
         """Test that infinite power is rejected."""
         with pytest.raises(ValidationError):
-            LaserPowerRequest(power_w=float('inf'))
+            LaserPowerRequest(power_w=float("inf"))
 
 
 class TestHUDBrightnessRequest:
@@ -248,7 +249,7 @@ class TestHUDBrightnessRequest:
     def test_brightness_nan_rejected(self):
         """Test that NaN brightness is rejected."""
         with pytest.raises(ValidationError):
-            HUDBrightnessRequest(percent=float('nan'))
+            HUDBrightnessRequest(percent=float("nan"))
 
 
 class TestHUDModeRequest:
@@ -343,7 +344,7 @@ class TestRenderObjectRequest:
     def test_scale_nan_rejected(self):
         """Test that NaN scale is rejected."""
         with pytest.raises(ValidationError):
-            RenderObjectRequest(object_type="sphere", scale=float('nan'))
+            RenderObjectRequest(object_type="sphere", scale=float("nan"))
 
 
 class TestBubbleStartRequest:
@@ -366,7 +367,7 @@ class TestBubbleStartRequest:
         assert req.frequency_hz == 20000
 
     def test_frequency_max_boundary(self):
-        """Test frequency at maximum boundary (matches BubbleGenerator's own 80kHz hardware bound)."""
+        """Test frequency at maximum boundary (BubbleGenerator's 80 kHz hardware bound)."""
         req = BubbleStartRequest(frequency_hz=80000)
         assert req.frequency_hz == 80000
 
@@ -403,7 +404,7 @@ class TestBubbleStartRequest:
     def test_duty_cycle_nan_rejected(self):
         """Test that NaN duty cycle is rejected."""
         with pytest.raises(ValidationError):
-            BubbleStartRequest(duty_cycle=float('nan'))
+            BubbleStartRequest(duty_cycle=float("nan"))
 
 
 class TestResponseSchemas:
@@ -427,7 +428,7 @@ class TestResponseSchemas:
             mode="land",
             resolution="1280x800",
             brightness_cd_m2=4000,
-            alarms=[]
+            alarms=[],
         )
         assert resp.frame == 1
         assert resp.mode == "land"
@@ -440,7 +441,7 @@ class TestResponseSchemas:
             mode="marine",
             resolution="1280x800",
             brightness_cd_m2=2000,
-            alarms=["overtemp", "low_voltage"]
+            alarms=["overtemp", "low_voltage"],
         )
         assert len(resp.alarms) == 2
         assert "overtemp" in resp.alarms

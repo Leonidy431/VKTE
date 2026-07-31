@@ -1,8 +1,10 @@
 """Unit tests for BubbleGenerator module."""
 
 import pytest
-import math
-from app.modules.volumetric.bubble_generator import BubbleGenerator, BubbleStabilityRegime, BubbleMetrics
+from app.modules.volumetric.bubble_generator import (
+    BubbleGenerator,
+    BubbleStabilityRegime,
+)
 
 
 class TestBubbleGeneratorInit:
@@ -20,10 +22,7 @@ class TestBubbleGeneratorInit:
     def test_init_custom_params(self):
         """Test initialization with custom parameters."""
         gen = BubbleGenerator(
-            frequency_hz=50000,
-            duty_cycle=0.7,
-            stabilizer_type="SDS",
-            use_mock_hw=False
+            frequency_hz=50000, duty_cycle=0.7, stabilizer_type="SDS", use_mock_hw=False
         )
         assert gen.frequency_hz == 50000
         assert gen.duty_cycle == 0.7
@@ -260,14 +259,17 @@ class TestBubbleGeneratorStabilityRegime:
 
         status = gen.get_status()
         regime = status["stability_regime"]
-        assert regime in [BubbleStabilityRegime.STABLE.value, BubbleStabilityRegime.INERTIAL.value]
+        assert regime in [
+            BubbleStabilityRegime.STABLE.value,
+            BubbleStabilityRegime.INERTIAL.value,
+        ]
 
         # High pressure → inertial
         gen.set_acoustic_pressure(400000)
         status = gen.get_status()
         assert status["stability_regime"] in [
             BubbleStabilityRegime.INERTIAL.value,
-            BubbleStabilityRegime.STABLE.value
+            BubbleStabilityRegime.STABLE.value,
         ]
 
 

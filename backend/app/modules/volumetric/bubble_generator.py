@@ -15,7 +15,6 @@ Physics:
 """
 
 import logging
-import asyncio
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional, Dict, Any
@@ -26,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 class BubbleStabilityRegime(Enum):
     """Cavitation regimes per BUBBLE_TECHNOLOGY.md"""
+
     STABLE = "stable"  # Oscillating bubbles, persist for multiple frames
     INERTIAL = "inertial"  # Violently collapsing bubbles, erosive, short-lived
     OFF = "off"  # No cavitation
@@ -34,6 +34,7 @@ class BubbleStabilityRegime(Enum):
 @dataclass
 class BubbleMetrics:
     """Real-time bubble metrics."""
+
     frequency_hz: int
     duty_cycle: float
     resonant_freq_hz: float
@@ -160,7 +161,9 @@ class BubbleGenerator:
         else:
             self._stability_regime = BubbleStabilityRegime.INERTIAL
 
-        logger.debug(f"Acoustic pressure set to {pressure_pa:.1e} Pa ({self._stability_regime.value})")
+        logger.debug(
+            f"Acoustic pressure set to {pressure_pa:.1e} Pa ({self._stability_regime.value})"
+        )
 
     def set_bubble_radius(self, radius_um: float):
         """
@@ -189,7 +192,7 @@ class BubbleGenerator:
         """
         radius_m = self._bubble_radius_um * 1e-6
         numerator = 3.0 * self.HEAT_CAPACITY_RATIO * self.ATMOSPHERIC_PRESSURE_PA
-        denominator = self.WATER_DENSITY_KG_M3 * (radius_m ** 2)
+        denominator = self.WATER_DENSITY_KG_M3 * (radius_m**2)
         f0_hz = (1.0 / (2.0 * math.pi)) * math.sqrt(numerator / denominator)
         return f0_hz
 

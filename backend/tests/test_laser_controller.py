@@ -1,7 +1,11 @@
 """Unit tests for LaserController module."""
 
 import pytest
-from app.modules.volumetric.laser_controller import LaserController, LaserMode, ScanPoint
+from app.modules.volumetric.laser_controller import (
+    LaserController,
+    LaserMode,
+    ScanPoint,
+)
 
 
 class TestLaserControllerInit:
@@ -19,11 +23,7 @@ class TestLaserControllerInit:
 
     def test_init_custom_params(self):
         """Test initialization with custom parameters."""
-        ctrl = LaserController(
-            wavelength_nm=1064,
-            power_w=10.0,
-            use_mock_hw=False
-        )
+        ctrl = LaserController(wavelength_nm=1064, power_w=10.0, use_mock_hw=False)
         assert ctrl.wavelength_nm == 1064
         assert ctrl.power_w_max == 10.0
         assert ctrl.use_mock_hw is False

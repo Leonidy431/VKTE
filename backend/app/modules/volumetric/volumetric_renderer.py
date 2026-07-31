@@ -10,7 +10,7 @@ Reference:
 
 import logging
 import math
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -95,12 +95,18 @@ class VolumetricRenderer:
             for j in range(self.grid_resolution):
                 for k in range(self.grid_resolution):
                     # Distance from center
-                    dist = math.sqrt((i - center) ** 2 + (j - center) ** 2 + (k - center) ** 2)
+                    dist = math.sqrt(
+                        (i - center) ** 2 + (j - center) ** 2 + (k - center) ** 2
+                    )
 
                     if dist <= radius:
                         # Solid sphere
                         intensity = 1.0 - (dist / radius) * 0.5  # Gradient falloff
-                        self.voxel_grid[i, j, k] = [intensity, intensity * 0.8, intensity * 0.6]
+                        self.voxel_grid[i, j, k] = [
+                            intensity,
+                            intensity * 0.8,
+                            intensity * 0.6,
+                        ]
 
     def _render_cube(self, scale: float):
         """Render a cube at center of voxel grid."""
@@ -111,9 +117,11 @@ class VolumetricRenderer:
             for j in range(self.grid_resolution):
                 for k in range(self.grid_resolution):
                     # Check if inside cube
-                    if (abs(i - center) <= half_size and
-                        abs(j - center) <= half_size and
-                        abs(k - center) <= half_size):
+                    if (
+                        abs(i - center) <= half_size
+                        and abs(j - center) <= half_size
+                        and abs(k - center) <= half_size
+                    ):
                         self.voxel_grid[i, j, k] = [0.8, 0.9, 1.0]
 
     def _render_torus(self, scale: float):
@@ -128,8 +136,10 @@ class VolumetricRenderer:
                     # Torus distance formula
                     dx = i - center
                     dz = k - center
-                    dist_from_axis = math.sqrt(dx ** 2 + dz ** 2)
-                    dist_from_torus = abs(dist_from_axis - major_radius) + abs(j - center)
+                    dist_from_axis = math.sqrt(dx**2 + dz**2)
+                    dist_from_torus = abs(dist_from_axis - major_radius) + abs(
+                        j - center
+                    )
 
                     if dist_from_torus <= minor_radius:
                         intensity = 1.0 - (dist_from_torus / minor_radius) * 0.5
@@ -137,9 +147,7 @@ class VolumetricRenderer:
 
     def get_status(self) -> Dict[str, Any]:
         """Get current renderer status."""
-        active_voxel_count = np.count_nonzero(
-            np.sum(self.voxel_grid, axis=3) > 0.01
-        )
+        active_voxel_count = np.count_nonzero(np.sum(self.voxel_grid, axis=3) > 0.01)
 
         return {
             "rendering": self._render_active,
@@ -147,16 +155,14 @@ class VolumetricRenderer:
             "frame_rate_fps": self.frame_rate_fps,
             "frame_count": self._frame_count,
             "active_voxels": int(active_voxel_count),
-            "total_voxels": self.grid_resolution ** 3,
+            "total_voxels": self.grid_resolution**3,
         }
 
     def get_telemetry(self) -> Dict[str, Any]:
         """Get real-time telemetry for WebSocket streaming."""
         self._frame_count += 1
 
-        active_voxel_count = np.count_nonzero(
-            np.sum(self.voxel_grid, axis=3) > 0.01
-        )
+        active_voxel_count = np.count_nonzero(np.sum(self.voxel_grid, axis=3) > 0.01)
 
         return {
             "rendering": self._render_active,

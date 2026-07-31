@@ -68,7 +68,9 @@ class RenderingCoordinator:
             logger.info(f"{name} initialized successfully")
             return instance
         except Exception as e:
-            logger.error(f"{name} failed to initialize (degraded mode): {e}", exc_info=True)
+            logger.error(
+                f"{name} failed to initialize (degraded mode): {e}", exc_info=True
+            )
             self.degraded_subsystems[name] = str(e)
             return None
 
@@ -126,7 +128,9 @@ class RenderingCoordinator:
             try:
                 self.laser_ctrl.shutdown()
             except Exception as e:
-                logger.error(f"Error shutting down laser_controller: {e}", exc_info=True)
+                logger.error(
+                    f"Error shutting down laser_controller: {e}", exc_info=True
+                )
 
     @property
     def is_degraded(self) -> bool:
@@ -142,7 +146,9 @@ class RenderingCoordinator:
         if not self.laser_ctrl:
             raise RuntimeError("Laser controller not initialized")
         if not self.bubble_gen or not self.bubble_gen._running:
-            raise RuntimeError("Cannot start laser scan: bubble generation is not active")
+            raise RuntimeError(
+                "Cannot start laser scan: bubble generation is not active"
+            )
         self.laser_ctrl.start_scan()
 
     def get_status(self) -> Dict[str, Any]:
@@ -150,8 +156,12 @@ class RenderingCoordinator:
         return {
             "degraded": self.is_degraded,
             "degraded_subsystems": dict(self.degraded_subsystems),
-            "bubble_generator": self.bubble_gen.get_status() if self.bubble_gen else None,
-            "laser_controller": self.laser_ctrl.get_status() if self.laser_ctrl else None,
+            "bubble_generator": self.bubble_gen.get_status()
+            if self.bubble_gen
+            else None,
+            "laser_controller": self.laser_ctrl.get_status()
+            if self.laser_ctrl
+            else None,
             "renderer": self.renderer.get_status() if self.renderer else None,
             "hud": self.hud_renderer.get_status() if self.hud_renderer else None,
         }

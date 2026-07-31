@@ -8,7 +8,15 @@ References:
 - ARCHITECTURE_AUDIT.md (security & validation)
 """
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, Depends, status, Request
+from fastapi import (
+    FastAPI,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+    Depends,
+    status,
+    Request,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.exceptions import RequestValidationError
@@ -19,10 +27,8 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from contextlib import asynccontextmanager
-import logging
 import asyncio
 import math
-import os
 from typing import Optional
 import structlog
 
@@ -33,8 +39,13 @@ from app.modules.volumetric.hud_renderer import HUDRenderer, HUDMode, TelemetryF
 from app.config import Settings
 from app.coordinator import RenderingCoordinator
 from app.schemas import (
-    HUDRenderRequest, HUDModeRequest, HUDBrightnessRequest,
-    LaserPowerRequest, RenderObjectRequest, BubbleStartRequest, HealthResponse
+    HUDRenderRequest,
+    HUDModeRequest,
+    HUDBrightnessRequest,
+    LaserPowerRequest,
+    RenderObjectRequest,
+    BubbleStartRequest,
+    HealthResponse,
 )
 
 # Setup structured logging
@@ -48,7 +59,7 @@ structlog.configure(
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),
-        structlog.processors.JSONRenderer()
+        structlog.processors.JSONRenderer(),
     ],
     context_class=dict,
     logger_factory=structlog.stdlib.LoggerFactory(),
@@ -67,7 +78,9 @@ VALID_API_KEYS = {settings.API_KEY}
 security = HTTPBearer()
 
 
-def verify_api_key(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+def verify_api_key(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+) -> str:
     """Verify API key from Authorization header."""
     if credentials.credentials not in VALID_API_KEYS:
         logger.warning("invalid_api_key", key=credentials.credentials[:10])
@@ -140,10 +153,10 @@ app = FastAPI(
 
 # Add rate limiter
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, lambda r, e: HTTPException(
-    status_code=429,
-    detail="Rate limit exceeded"
-))
+app.add_exception_handler(
+    RateLimitExceeded,
+    lambda r, e: HTTPException(status_code=429, detail="Rate limit exceeded"),
+)
 
 # CORS configuration
 app.add_middleware(
@@ -184,6 +197,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 # Health & Status Endpoints
 # ============================================================================
 
+
 @app.get("/health")
 @limiter.limit("100/minute")
 async def health_check(request: Request):
@@ -214,7 +228,9 @@ async def system_status():
         "laser_controller": laser_ctrl.get_status(),
         "renderer": renderer.get_status(),
         "degraded": coordinator.is_degraded if coordinator else False,
-        "degraded_subsystems": list(coordinator.degraded_subsystems.keys()) if coordinator else [],
+        "degraded_subsystems": list(coordinator.degraded_subsystems.keys())
+        if coordinator
+        else [],
         "timestamp": asyncio.get_event_loop().time(),
     }
 
@@ -222,6 +238,7 @@ async def system_status():
 # ============================================================================
 # Bubble Control Endpoints
 # ============================================================================
+
 
 @app.post("/api/v1/bubble/start")
 @limiter.limit("20/minute")
@@ -242,11 +259,13 @@ async def start_bubbles(
         bubble_gen.set_frequency(req.frequency_hz)
         bubble_gen.set_duty_cycle(req.duty_cycle)
         bubble_gen.start()
-        logger.info("bubbles_started", frequency_hz=req.frequency_hz, duty_cycle=req.duty_cycle)
+        logger.info(
+            "bubbles_started", frequency_hz=req.frequency_hz, duty_cycle=req.duty_cycle
+        )
         return {
             "status": "bubbles_started",
             "frequency_hz": req.frequency_hz,
-            "duty_cycle": req.duty_cycle
+            "duty_cycle": req.duty_cycle,
         }
     except ValueError as e:
         logger.warning("bubble_start_error", error=str(e))
@@ -266,6 +285,7 @@ async def stop_bubbles():
 # ============================================================================
 # Laser Control Endpoints
 # ============================================================================
+
 
 @app.post("/api/v1/laser/power")
 @limiter.limit("60/minute")
@@ -315,6 +335,7 @@ async def start_laser_scan():
 # Render Endpoints
 # ============================================================================
 
+
 @app.post("/api/v1/render/object")
 @limiter.limit("30/minute")
 async def render_3d_object(
@@ -335,8 +356,14 @@ async def render_3d_object(
 
     try:
         renderer.render_object(req.object_type, req.scale)
-        logger.info("render_object_started", object_type=req.object_type, scale=req.scale)
-        return {"status": "render_started", "object": req.object_type, "scale": req.scale}
+        logger.info(
+            "render_object_started", object_type=req.object_type, scale=req.scale
+        )
+        return {
+            "status": "render_started",
+            "object": req.object_type,
+            "scale": req.scale,
+        }
     except ValueError as e:
         logger.warning("render_error", error=str(e))
         raise HTTPException(status_code=400, detail=str(e))
@@ -345,6 +372,7 @@ async def render_3d_object(
 # ============================================================================
 # HUD Control Endpoints
 # ============================================================================
+
 
 @app.post("/api/v1/hud/render")
 @limiter.limit("30/minute")  # 30 renders per minute max
@@ -379,7 +407,11 @@ async def render_hud_frame(
         )
 
         result = hud_renderer.render_frame(telemetry)
-        logger.info("hud_render_success", mode=hud_renderer.mode.value, frame=result.get("frame"))
+        logger.info(
+            "hud_render_success",
+            mode=hud_renderer.mode.value,
+            frame=result.get("frame"),
+        )
         return result
     except ValueError as e:
         logger.warning("hud_render_validation_error", error=str(e))
@@ -462,6 +494,7 @@ async def get_hud_status():
 # WebSocket for Real-time Telemetry
 # ============================================================================
 
+
 @app.websocket("/ws/telemetry")
 async def telemetry_websocket(websocket: WebSocket):
     """
@@ -504,8 +537,11 @@ async def telemetry_websocket(websocket: WebSocket):
                 pass
 
 
-if __name__ == "__main__":  # pragma: no cover - process entrypoint, not exercised by tests
+if (
+    __name__ == "__main__"
+):  # pragma: no cover - process entrypoint, not exercised by tests
     import uvicorn
+
     uvicorn.run(
         "app.main:app",
         host=settings.HOST,

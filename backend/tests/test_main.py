@@ -68,14 +68,9 @@ class TestBubbleControlEndpoints:
 
     def test_start_bubbles_with_auth(self, client, auth_headers):
         """Test starting bubbles with valid authentication."""
-        payload = {
-            "frequency_hz": 40000,
-            "duty_cycle": 0.5
-        }
+        payload = {"frequency_hz": 40000, "duty_cycle": 0.5}
         response = client.post(
-            "/api/v1/bubble/start",
-            json=payload,
-            headers=auth_headers
+            "/api/v1/bubble/start", json=payload, headers=auth_headers
         )
         assert response.status_code == 200
         data = response.json()
@@ -84,49 +79,31 @@ class TestBubbleControlEndpoints:
 
     def test_start_bubbles_without_auth(self, client):
         """Test starting bubbles without authentication."""
-        payload = {
-            "frequency_hz": 40000,
-            "duty_cycle": 0.5
-        }
+        payload = {"frequency_hz": 40000, "duty_cycle": 0.5}
         response = client.post("/api/v1/bubble/start", json=payload)
         assert response.status_code == 403  # Forbidden (no auth header)
 
     def test_start_bubbles_invalid_auth(self, client, invalid_auth_headers):
         """Test starting bubbles with invalid API key."""
-        payload = {
-            "frequency_hz": 40000,
-            "duty_cycle": 0.5
-        }
+        payload = {"frequency_hz": 40000, "duty_cycle": 0.5}
         response = client.post(
-            "/api/v1/bubble/start",
-            json=payload,
-            headers=invalid_auth_headers
+            "/api/v1/bubble/start", json=payload, headers=invalid_auth_headers
         )
         assert response.status_code == 401  # Unauthorized
 
     def test_start_bubbles_invalid_frequency(self, client, auth_headers):
         """Test starting bubbles with invalid frequency."""
-        payload = {
-            "frequency_hz": 10000,  # Below minimum 20000
-            "duty_cycle": 0.5
-        }
+        payload = {"frequency_hz": 10000, "duty_cycle": 0.5}  # Below minimum 20000
         response = client.post(
-            "/api/v1/bubble/start",
-            json=payload,
-            headers=auth_headers
+            "/api/v1/bubble/start", json=payload, headers=auth_headers
         )
         assert response.status_code == 422  # Pydantic validation error
 
     def test_start_bubbles_invalid_duty_cycle(self, client, auth_headers):
         """Test starting bubbles with invalid duty cycle."""
-        payload = {
-            "frequency_hz": 40000,
-            "duty_cycle": 1.5  # Above maximum 1.0
-        }
+        payload = {"frequency_hz": 40000, "duty_cycle": 1.5}  # Above maximum 1.0
         response = client.post(
-            "/api/v1/bubble/start",
-            json=payload,
-            headers=auth_headers
+            "/api/v1/bubble/start", json=payload, headers=auth_headers
         )
         assert response.status_code == 422  # Pydantic validation error
 
@@ -144,9 +121,7 @@ class TestLaserControlEndpoints:
         """Test setting laser power with authentication."""
         payload = {"power_w": 5.0}
         response = client.post(
-            "/api/v1/laser/power",
-            json=payload,
-            headers=auth_headers
+            "/api/v1/laser/power", json=payload, headers=auth_headers
         )
         assert response.status_code == 200
         data = response.json()
@@ -163,9 +138,7 @@ class TestLaserControlEndpoints:
         """Test setting laser power with invalid value."""
         payload = {"power_w": 10.0}  # Above maximum 8.0
         response = client.post(
-            "/api/v1/laser/power",
-            json=payload,
-            headers=auth_headers
+            "/api/v1/laser/power", json=payload, headers=auth_headers
         )
         assert response.status_code == 422  # Pydantic validation error
 
@@ -193,14 +166,9 @@ class TestRenderEndpoints:
 
     def test_render_sphere_with_auth(self, client, auth_headers):
         """Test rendering sphere with authentication."""
-        payload = {
-            "object_type": "sphere",
-            "scale": 1.0
-        }
+        payload = {"object_type": "sphere", "scale": 1.0}
         response = client.post(
-            "/api/v1/render/object",
-            json=payload,
-            headers=auth_headers
+            "/api/v1/render/object", json=payload, headers=auth_headers
         )
         assert response.status_code == 200
         data = response.json()
@@ -209,62 +177,39 @@ class TestRenderEndpoints:
 
     def test_render_cube_with_auth(self, client, auth_headers):
         """Test rendering cube with authentication."""
-        payload = {
-            "object_type": "cube",
-            "scale": 0.5
-        }
+        payload = {"object_type": "cube", "scale": 0.5}
         response = client.post(
-            "/api/v1/render/object",
-            json=payload,
-            headers=auth_headers
+            "/api/v1/render/object", json=payload, headers=auth_headers
         )
         assert response.status_code == 200
 
     def test_render_torus_with_auth(self, client, auth_headers):
         """Test rendering torus with authentication."""
-        payload = {
-            "object_type": "torus",
-            "scale": 1.5
-        }
+        payload = {"object_type": "torus", "scale": 1.5}
         response = client.post(
-            "/api/v1/render/object",
-            json=payload,
-            headers=auth_headers
+            "/api/v1/render/object", json=payload, headers=auth_headers
         )
         assert response.status_code == 200
 
     def test_render_without_auth(self, client):
         """Test rendering without authentication."""
-        payload = {
-            "object_type": "sphere",
-            "scale": 1.0
-        }
+        payload = {"object_type": "sphere", "scale": 1.0}
         response = client.post("/api/v1/render/object", json=payload)
         assert response.status_code == 403
 
     def test_render_invalid_object_type(self, client, auth_headers):
         """Test rendering invalid object type."""
-        payload = {
-            "object_type": "invalid",
-            "scale": 1.0
-        }
+        payload = {"object_type": "invalid", "scale": 1.0}
         response = client.post(
-            "/api/v1/render/object",
-            json=payload,
-            headers=auth_headers
+            "/api/v1/render/object", json=payload, headers=auth_headers
         )
         assert response.status_code == 422  # Pydantic validation error
 
     def test_render_invalid_scale(self, client, auth_headers):
         """Test rendering with invalid scale."""
-        payload = {
-            "object_type": "sphere",
-            "scale": 3.0  # Above maximum 2.0
-        }
+        payload = {"object_type": "sphere", "scale": 3.0}  # Above maximum 2.0
         response = client.post(
-            "/api/v1/render/object",
-            json=payload,
-            headers=auth_headers
+            "/api/v1/render/object", json=payload, headers=auth_headers
         )
         assert response.status_code == 422  # Pydantic validation error
 
@@ -274,16 +219,8 @@ class TestHUDControlEndpoints:
 
     def test_render_hud_frame_land_mode(self, client, auth_headers):
         """Test rendering HUD frame in land mode."""
-        payload = {
-            "speed_kmh": 80.0,
-            "engine_temp_c": 90.0,
-            "battery_voltage_v": 13.5
-        }
-        response = client.post(
-            "/api/v1/hud/render",
-            json=payload,
-            headers=auth_headers
-        )
+        payload = {"speed_kmh": 80.0, "engine_temp_c": 90.0, "battery_voltage_v": 13.5}
+        response = client.post("/api/v1/hud/render", json=payload, headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert "frame" in data
@@ -292,36 +229,20 @@ class TestHUDControlEndpoints:
 
     def test_render_hud_frame_marine_mode(self, client, auth_headers):
         """Test rendering HUD frame in marine mode."""
-        payload = {
-            "depth_m": 25.0,
-            "water_temp_c": 18.0,
-            "pressure_bar": 3.5
-        }
-        response = client.post(
-            "/api/v1/hud/render",
-            json=payload,
-            headers=auth_headers
-        )
+        payload = {"depth_m": 25.0, "water_temp_c": 18.0, "pressure_bar": 3.5}
+        response = client.post("/api/v1/hud/render", json=payload, headers=auth_headers)
         assert response.status_code == 200
 
     def test_render_hud_without_auth(self, client):
         """Test rendering HUD without authentication."""
-        payload = {
-            "speed_kmh": 50.0
-        }
+        payload = {"speed_kmh": 50.0}
         response = client.post("/api/v1/hud/render", json=payload)
         assert response.status_code == 403
 
     def test_render_hud_speed_out_of_range(self, client, auth_headers):
         """Test rendering HUD with out-of-range speed."""
-        payload = {
-            "speed_kmh": 300.0  # Above maximum 250
-        }
-        response = client.post(
-            "/api/v1/hud/render",
-            json=payload,
-            headers=auth_headers
-        )
+        payload = {"speed_kmh": 300.0}  # Above maximum 250
+        response = client.post("/api/v1/hud/render", json=payload, headers=auth_headers)
         assert response.status_code == 422  # Pydantic validation error
 
     def test_render_hud_nan_speed(self, client, auth_headers):
@@ -339,11 +260,7 @@ class TestHUDControlEndpoints:
     def test_set_hud_mode_land(self, client, auth_headers):
         """Test setting HUD mode to land."""
         payload = {"mode": "land"}
-        response = client.post(
-            "/api/v1/hud/mode",
-            json=payload,
-            headers=auth_headers
-        )
+        response = client.post("/api/v1/hud/mode", json=payload, headers=auth_headers)
         assert response.status_code == 200
         data = response.json()
         assert data["status"] == "hud_mode_set"
@@ -352,42 +269,28 @@ class TestHUDControlEndpoints:
     def test_set_hud_mode_marine(self, client, auth_headers):
         """Test setting HUD mode to marine."""
         payload = {"mode": "marine"}
-        response = client.post(
-            "/api/v1/hud/mode",
-            json=payload,
-            headers=auth_headers
-        )
+        response = client.post("/api/v1/hud/mode", json=payload, headers=auth_headers)
         assert response.status_code == 200
         assert response.json()["mode"] == "marine"
 
     def test_set_hud_mode_debug(self, client, auth_headers):
         """Test setting HUD mode to debug."""
         payload = {"mode": "debug"}
-        response = client.post(
-            "/api/v1/hud/mode",
-            json=payload,
-            headers=auth_headers
-        )
+        response = client.post("/api/v1/hud/mode", json=payload, headers=auth_headers)
         assert response.status_code == 200
         assert response.json()["mode"] == "debug"
 
     def test_set_hud_mode_invalid(self, client, auth_headers):
         """Test setting HUD mode to invalid value."""
         payload = {"mode": "invalid"}
-        response = client.post(
-            "/api/v1/hud/mode",
-            json=payload,
-            headers=auth_headers
-        )
+        response = client.post("/api/v1/hud/mode", json=payload, headers=auth_headers)
         assert response.status_code == 422  # Pydantic validation error
 
     def test_set_hud_brightness_valid(self, client, auth_headers):
         """Test setting HUD brightness."""
         payload = {"percent": 75.0}
         response = client.post(
-            "/api/v1/hud/brightness",
-            json=payload,
-            headers=auth_headers
+            "/api/v1/hud/brightness", json=payload, headers=auth_headers
         )
         assert response.status_code == 200
         data = response.json()
@@ -399,9 +302,7 @@ class TestHUDControlEndpoints:
         """Test setting HUD brightness to zero."""
         payload = {"percent": 0.0}
         response = client.post(
-            "/api/v1/hud/brightness",
-            json=payload,
-            headers=auth_headers
+            "/api/v1/hud/brightness", json=payload, headers=auth_headers
         )
         assert response.status_code == 200
 
@@ -409,9 +310,7 @@ class TestHUDControlEndpoints:
         """Test setting HUD brightness to invalid value."""
         payload = {"percent": 150.0}  # Above maximum 100
         response = client.post(
-            "/api/v1/hud/brightness",
-            json=payload,
-            headers=auth_headers
+            "/api/v1/hud/brightness", json=payload, headers=auth_headers
         )
         assert response.status_code == 422  # Pydantic validation error
 
@@ -438,14 +337,9 @@ class TestRateLimiting:
 
     def test_bubble_endpoint_requires_auth(self, client, invalid_auth_headers):
         """Test that bubble endpoint properly rejects invalid auth."""
-        payload = {
-            "frequency_hz": 40000,
-            "duty_cycle": 0.5
-        }
+        payload = {"frequency_hz": 40000, "duty_cycle": 0.5}
         response = client.post(
-            "/api/v1/bubble/start",
-            json=payload,
-            headers=invalid_auth_headers
+            "/api/v1/bubble/start", json=payload, headers=invalid_auth_headers
         )
         assert response.status_code == 401
 
@@ -456,11 +350,7 @@ class TestErrorHandling:
     def test_missing_required_field(self, client, auth_headers):
         """Test error when required field is missing."""
         payload = {"mode": ""}  # Empty mode
-        response = client.post(
-            "/api/v1/hud/mode",
-            json=payload,
-            headers=auth_headers
-        )
+        response = client.post("/api/v1/hud/mode", json=payload, headers=auth_headers)
         assert response.status_code == 422  # Pydantic validation error
 
     def test_invalid_json(self, client, auth_headers):
@@ -477,7 +367,7 @@ class TestErrorHandling:
         response = client.post(
             "/api/v1/hud/brightness",
             data="percent=50",
-            headers={**auth_headers, "Content-Type": "text/plain"}
+            headers={**auth_headers, "Content-Type": "text/plain"},
         )
         assert response.status_code in [400, 422, 415]
 
@@ -708,7 +598,8 @@ class TestUnderlyingModuleValueErrors:
 
     def test_hud_brightness_value_error(self, client, auth_headers):
         with patch(
-            "app.main.hud_renderer.set_brightness", side_effect=ValueError("bad brightness")
+            "app.main.hud_renderer.set_brightness",
+            side_effect=ValueError("bad brightness"),
         ):
             response = client.post(
                 "/api/v1/hud/brightness",
@@ -729,7 +620,8 @@ class TestLifespanErrorHandling:
 
     def test_startup_failure_is_degraded_not_fatal(self):
         with patch(
-            "app.coordinator.BubbleGenerator", side_effect=RuntimeError("hardware init failed")
+            "app.coordinator.BubbleGenerator",
+            side_effect=RuntimeError("hardware init failed"),
         ):
             with TestClient(fastapi_app) as test_client:
                 import app.main as main_module
@@ -745,7 +637,10 @@ class TestLifespanErrorHandling:
                 assert "bubble_generator" in health.json()["degraded_subsystems"]
 
     def test_shutdown_failure_is_logged_not_raised(self):
-        with patch("app.coordinator.BubbleGenerator.stop", side_effect=RuntimeError("shutdown failed")):
+        with patch(
+            "app.coordinator.BubbleGenerator.stop",
+            side_effect=RuntimeError("shutdown failed"),
+        ):
             # Shutdown errors are caught and logged inside coordinator.shutdown(),
             # so exiting the context manager must not raise.
             with TestClient(fastapi_app):

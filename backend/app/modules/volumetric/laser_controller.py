@@ -11,14 +11,14 @@ Reference:
 import logging
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Dict, Any, Tuple
-import math
+from typing import Dict, Any, Tuple
 
 logger = logging.getLogger(__name__)
 
 
 class LaserMode(Enum):
     """Laser operation modes."""
+
     OFF = "off"
     STANDBY = "standby"
     CONTINUOUS = "continuous"
@@ -29,6 +29,7 @@ class LaserMode(Enum):
 @dataclass
 class ScanPoint:
     """A single laser scan point (x, y galvo angle)."""
+
     x_angle_deg: float  # ±20° (Cambridge Tech 6215H)
     y_angle_deg: float  # ±20°
     power_fraction: float  # 0–1.0 relative power at this point
@@ -47,7 +48,9 @@ class LaserController:
     GALVO_MAX_ANGLE_DEG = 20.0  # ±20° optical (Cambridge Tech 6215H)
     GALVO_STEP_RESPONSE_US = 500  # microseconds
 
-    def __init__(self, wavelength_nm: int = 532, power_w: float = 8.0, use_mock_hw: bool = True):
+    def __init__(
+        self, wavelength_nm: int = 532, power_w: float = 8.0, use_mock_hw: bool = True
+    ):
         """
         Initialize laser controller.
 
@@ -78,7 +81,9 @@ class LaserController:
             ValueError: If power is out of range.
         """
         if not (0 <= power_w <= self.power_w_max):
-            raise ValueError(f"Power out of range [0, {self.power_w_max}], got {power_w}")
+            raise ValueError(
+                f"Power out of range [0, {self.power_w_max}], got {power_w}"
+            )
 
         self._power_current_w = power_w
         logger.info(f"Laser power set to {power_w:.2f} W")
@@ -100,7 +105,9 @@ class LaserController:
             raise ValueError(f"Frequency out of range, got {frequency_hz} Hz")
 
         self._mode = LaserMode.PULSED
-        logger.info(f"Laser started (pulsed mode: {frequency_hz} Hz, duty={duty_cycle:.2f})")
+        logger.info(
+            f"Laser started (pulsed mode: {frequency_hz} Hz, duty={duty_cycle:.2f})"
+        )
 
     def start_scan(self):
         """Start laser scanning mode (synchronized with bubble generator)."""

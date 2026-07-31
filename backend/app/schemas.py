@@ -10,34 +10,32 @@ separate finite-value validator is needed on top of the range constraints.
 """
 
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List
 
 
 class HUDRenderRequest(BaseModel):
     """Validated HUD render request."""
+
     speed_kmh: float = Field(
         default=0.0,
         ge=0,
         le=250,
-        description="Vehicle speed 0-250 km/h (negative/NaN rejected)"
+        description="Vehicle speed 0-250 km/h (negative/NaN rejected)",
     )
     engine_temp_c: float = Field(
-        default=20.0,
-        ge=-40,
-        le=150,
-        description="Engine temperature -40 to +150°C"
+        default=20.0, ge=-40, le=150, description="Engine temperature -40 to +150°C"
     )
     battery_voltage_v: float = Field(
         default=12.0,
         ge=8.0,
         le=16.0,
-        description="Battery voltage 8-16V (automotive 12V nominal)"
+        description="Battery voltage 8-16V (automotive 12V nominal)",
     )
     engine_current_a: float = Field(
         default=0.0,
         ge=-100,
         le=200,
-        description="Engine current -100 to +200A (charge/discharge)"
+        description="Engine current -100 to +200A (charge/discharge)",
     )
 
     # Marine mode parameters
@@ -45,84 +43,77 @@ class HUDRenderRequest(BaseModel):
         default=0.0,
         ge=-5,  # Small negative margin for sensor error
         le=500,
-        description="Underwater depth 0-500m"
+        description="Underwater depth 0-500m",
     )
     water_temp_c: float = Field(
         default=15.0,
         ge=-2,  # Seawater freeze point
         le=40,
-        description="Water temperature -2 to +40°C"
+        description="Water temperature -2 to +40°C",
     )
     pressure_bar: float = Field(
         default=1.0,
         ge=0.9,
         le=150,
-        description="Pressure 0.9-150 bar (1 atm @ surface, 1 atm per 10m depth)"
+        description="Pressure 0.9-150 bar (1 atm @ surface, 1 atm per 10m depth)",
     )
     salinity_ppt: float = Field(
-        default=35.0,
-        ge=0,
-        le=40,
-        description="Salinity 0-40 PSU (seawater ~35)"
+        default=35.0, ge=0, le=40, description="Salinity 0-40 PSU (seawater ~35)"
     )
 
 
 class LaserPowerRequest(BaseModel):
     """Validated laser power request."""
+
     power_w: float = Field(
-        ge=0.0,
-        le=8.0,
-        description="Laser power 0-8W (CNI MGL-III-532 max)"
+        ge=0.0, le=8.0, description="Laser power 0-8W (CNI MGL-III-532 max)"
     )
 
 
 class HUDBrightnessRequest(BaseModel):
     """Validated HUD brightness request."""
-    percent: float = Field(
-        ge=0.0,
-        le=100.0,
-        description="Display brightness 0-100%"
-    )
+
+    percent: float = Field(ge=0.0, le=100.0, description="Display brightness 0-100%")
 
 
 class HUDModeRequest(BaseModel):
     """Validated HUD mode request."""
+
     mode: str = Field(
         ...,
         pattern="^(land|marine|debug|off)$",
-        description="Operating mode: land, marine, debug, or off"
+        description="Operating mode: land, marine, debug, or off",
     )
 
 
 class RenderObjectRequest(BaseModel):
     """Validated 3D object render request."""
+
     object_type: str = Field(
         ...,
         pattern="^(sphere|cube|torus|mesh_custom)$",
-        description="Object type: sphere, cube, torus, or mesh_custom"
+        description="Object type: sphere, cube, torus, or mesh_custom",
     )
     scale: float = Field(
-        default=1.0,
-        ge=0.1,
-        le=2.0,
-        description="Scale factor 0.1-2.0"
+        default=1.0, ge=0.1, le=2.0, description="Scale factor 0.1-2.0"
     )
 
 
 class BubbleStartRequest(BaseModel):
     """Validated bubble start request."""
+
     frequency_hz: int = Field(
         default=40000,
         ge=20000,
         le=80000,
         description="Bubble frequency 20-80 kHz (Steminc: 40 kHz; matches "
-                     "BubbleGenerator's own hardware bound)"
+        "BubbleGenerator's own hardware bound)",
     )
     duty_cycle: float = Field(
         default=0.5,
         ge=0.0,
         le=1.0,
-        description="Duty cycle 0-1.0 (fraction of time active)"
+        description="Duty cycle 0-1.0 (fraction of time active)",
     )
 
 
@@ -135,6 +126,7 @@ class HealthResponse(BaseModel):
 
 class SystemStatusResponse(BaseModel):
     """Full system status."""
+
     bubble_generator: dict
     laser_controller: dict
     renderer: dict
@@ -144,6 +136,7 @@ class SystemStatusResponse(BaseModel):
 
 class HUDRenderResponse(BaseModel):
     """HUD render response."""
+
     frame: int
     mode: str
     resolution: str

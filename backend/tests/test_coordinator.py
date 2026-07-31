@@ -47,7 +47,9 @@ class TestRenderingCoordinatorDegradedMode:
 
     def test_bubble_generator_failure_is_isolated(self):
         coord = make_coordinator()
-        with patch("app.coordinator.BubbleGenerator", side_effect=RuntimeError("no hardware")):
+        with patch(
+            "app.coordinator.BubbleGenerator", side_effect=RuntimeError("no hardware")
+        ):
             coord.initialize()
 
         assert coord.bubble_gen is None
@@ -60,7 +62,9 @@ class TestRenderingCoordinatorDegradedMode:
 
     def test_laser_controller_failure_is_isolated(self):
         coord = make_coordinator()
-        with patch("app.coordinator.LaserController", side_effect=RuntimeError("no galvo")):
+        with patch(
+            "app.coordinator.LaserController", side_effect=RuntimeError("no galvo")
+        ):
             coord.initialize()
 
         assert coord.laser_ctrl is None
@@ -69,10 +73,15 @@ class TestRenderingCoordinatorDegradedMode:
 
     def test_all_subsystems_failing(self):
         coord = make_coordinator()
-        with patch("app.coordinator.BubbleGenerator", side_effect=RuntimeError("e1")), \
-             patch("app.coordinator.LaserController", side_effect=RuntimeError("e2")), \
-             patch("app.coordinator.VolumetricRenderer", side_effect=RuntimeError("e3")), \
-             patch("app.coordinator.HUDRenderer", side_effect=RuntimeError("e4")):
+        with patch(
+            "app.coordinator.BubbleGenerator", side_effect=RuntimeError("e1")
+        ), patch(
+            "app.coordinator.LaserController", side_effect=RuntimeError("e2")
+        ), patch(
+            "app.coordinator.VolumetricRenderer", side_effect=RuntimeError("e3")
+        ), patch(
+            "app.coordinator.HUDRenderer", side_effect=RuntimeError("e4")
+        ):
             coord.initialize()
 
         assert coord.bubble_gen is None
@@ -80,12 +89,17 @@ class TestRenderingCoordinatorDegradedMode:
         assert coord.renderer is None
         assert coord.hud_renderer is None
         assert set(coord.degraded_subsystems.keys()) == {
-            "bubble_generator", "laser_controller", "volumetric_renderer", "hud_renderer",
+            "bubble_generator",
+            "laser_controller",
+            "volumetric_renderer",
+            "hud_renderer",
         }
 
     def test_reinitialize_clears_previous_degraded_state(self):
         coord = make_coordinator()
-        with patch("app.coordinator.BubbleGenerator", side_effect=RuntimeError("no hardware")):
+        with patch(
+            "app.coordinator.BubbleGenerator", side_effect=RuntimeError("no hardware")
+        ):
             coord.initialize()
         assert coord.is_degraded is True
 
@@ -114,13 +128,17 @@ class TestRenderingCoordinatorShutdown:
     def test_shutdown_bubble_stop_error_is_logged_not_raised(self):
         coord = make_coordinator()
         coord.initialize()
-        with patch.object(coord.bubble_gen, "stop", side_effect=RuntimeError("stop failed")):
+        with patch.object(
+            coord.bubble_gen, "stop", side_effect=RuntimeError("stop failed")
+        ):
             coord.shutdown()  # must not raise
 
     def test_shutdown_laser_shutdown_error_is_logged_not_raised(self):
         coord = make_coordinator()
         coord.initialize()
-        with patch.object(coord.laser_ctrl, "shutdown", side_effect=RuntimeError("shutdown failed")):
+        with patch.object(
+            coord.laser_ctrl, "shutdown", side_effect=RuntimeError("shutdown failed")
+        ):
             coord.shutdown()  # must not raise
 
 
@@ -129,7 +147,9 @@ class TestRenderingCoordinatorLaserScanSync:
 
     def test_start_laser_scan_without_laser_controller(self):
         coord = make_coordinator()
-        with patch("app.coordinator.LaserController", side_effect=RuntimeError("no galvo")):
+        with patch(
+            "app.coordinator.LaserController", side_effect=RuntimeError("no galvo")
+        ):
             coord.initialize()
 
         with pytest.raises(RuntimeError, match="Laser controller not initialized"):
@@ -144,7 +164,9 @@ class TestRenderingCoordinatorLaserScanSync:
 
     def test_start_laser_scan_without_bubble_generator(self):
         coord = make_coordinator()
-        with patch("app.coordinator.BubbleGenerator", side_effect=RuntimeError("no hardware")):
+        with patch(
+            "app.coordinator.BubbleGenerator", side_effect=RuntimeError("no hardware")
+        ):
             coord.initialize()
 
         with pytest.raises(RuntimeError, match="bubble generation is not active"):
@@ -176,7 +198,9 @@ class TestRenderingCoordinatorStatus:
 
     def test_get_status_degraded(self):
         coord = make_coordinator()
-        with patch("app.coordinator.BubbleGenerator", side_effect=RuntimeError("no hardware")):
+        with patch(
+            "app.coordinator.BubbleGenerator", side_effect=RuntimeError("no hardware")
+        ):
             coord.initialize()
         status = coord.get_status()
 

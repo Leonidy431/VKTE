@@ -10,10 +10,9 @@ Reference:
 """
 
 import logging
-import math
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, Any, Optional, Tuple, List
+from typing import Dict, Any, Tuple, List
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -21,15 +20,17 @@ logger = logging.getLogger(__name__)
 
 class HUDMode(Enum):
     """Operating modes for HUD."""
-    LAND = "land"          # Volga 2410 mode (automotive)
-    MARINE = "marine"      # Underwater mode (sonar/depth data)
-    DEBUG = "debug"        # Simulator/debug mode
+
+    LAND = "land"  # Volga 2410 mode (automotive)
+    MARINE = "marine"  # Underwater mode (sonar/depth data)
+    DEBUG = "debug"  # Simulator/debug mode
     OFF = "off"
 
 
 @dataclass
 class TelemetryFrame:
     """Single frame of telemetry data for HUD rendering."""
+
     # Land mode (Volga)
     speed_kmh: float = 0.0
     engine_temp_c: float = 20.0
@@ -62,10 +63,10 @@ class HUDRenderer:
     DISPLAY_BRIGHTNESS_CD_M2 = 4000
 
     # Color palette for HUD (RGB, 0-255)
-    COLOR_PRIMARY = (0, 255, 100)      # Green (land), cyan-ish for marine
-    COLOR_WARNING = (255, 200, 0)      # Amber
-    COLOR_ALARM = (255, 50, 50)        # Red
-    COLOR_BACKGROUND = (0, 0, 0)       # Black (transparent on combiner)
+    COLOR_PRIMARY = (0, 255, 100)  # Green (land), cyan-ish for marine
+    COLOR_WARNING = (255, 200, 0)  # Amber
+    COLOR_ALARM = (255, 50, 50)  # Red
+    COLOR_BACKGROUND = (0, 0, 0)  # Black (transparent on combiner)
     COLOR_TEXT = (0, 255, 100)
 
     # Font sizes (proportional to display height)
@@ -94,7 +95,9 @@ class HUDRenderer:
         self._active = False
         self._frame_count = 0
 
-        logger.info(f"HUDRenderer initialized (mode={mode.value}, brightness={brightness_percent}%)")
+        logger.info(
+            f"HUDRenderer initialized (mode={mode.value}, brightness={brightness_percent}%)"
+        )
 
     def render_frame(self, telemetry: TelemetryFrame) -> Dict[str, Any]:
         """
@@ -131,7 +134,9 @@ class HUDRenderer:
             "frame": self._frame_count,
             "mode": self.mode.value,
             "resolution": f"{self.DISPLAY_WIDTH}x{self.DISPLAY_HEIGHT}",
-            "brightness_cd_m2": int(self.DISPLAY_BRIGHTNESS_CD_M2 * self.brightness_percent / 100),
+            "brightness_cd_m2": int(
+                self.DISPLAY_BRIGHTNESS_CD_M2 * self.brightness_percent / 100
+            ),
             "alarms": telemetry.alarms or [],
         }
 
@@ -149,9 +154,10 @@ class HUDRenderer:
         # Bottom: navigation/gear info (placeholder)
         self._draw_text(
             f"P  ENG OK  {telemetry.engine_temp_c:.1f}°C",
-            x=50, y=self.DISPLAY_HEIGHT - 100,
+            x=50,
+            y=self.DISPLAY_HEIGHT - 100,
             size=self.FONT_SIZE_MEDIUM,
-            color=self.COLOR_TEXT
+            color=self.COLOR_TEXT,
         )
 
     def _render_marine_mode(self, telemetry: TelemetryFrame):
@@ -162,33 +168,37 @@ class HUDRenderer:
         # Water temperature (top-left)
         self._draw_text(
             f"TEMP: {telemetry.water_temp_c:.1f}°C",
-            x=50, y=50,
+            x=50,
+            y=50,
             size=self.FONT_SIZE_MEDIUM,
-            color=self.COLOR_TEXT
+            color=self.COLOR_TEXT,
         )
 
         # Pressure (top-center)
         self._draw_text(
             f"PRESSURE: {telemetry.pressure_bar:.1f} bar",
-            x=self.DISPLAY_WIDTH // 2 - 150, y=50,
+            x=self.DISPLAY_WIDTH // 2 - 150,
+            y=50,
             size=self.FONT_SIZE_MEDIUM,
-            color=self.COLOR_TEXT
+            color=self.COLOR_TEXT,
         )
 
         # Salinity (top-right)
         self._draw_text(
             f"SALINITY: {telemetry.salinity_ppt:.1f} ppt",
-            x=self.DISPLAY_WIDTH - 350, y=50,
+            x=self.DISPLAY_WIDTH - 350,
+            y=50,
             size=self.FONT_SIZE_MEDIUM,
-            color=self.COLOR_TEXT
+            color=self.COLOR_TEXT,
         )
 
         # Bottom: dive time, compass (placeholder)
         self._draw_text(
             "DIVE TIME: 15:34  COMPASS: 045°",
-            x=50, y=self.DISPLAY_HEIGHT - 100,
+            x=50,
+            y=self.DISPLAY_HEIGHT - 100,
             size=self.FONT_SIZE_MEDIUM,
-            color=self.COLOR_TEXT
+            color=self.COLOR_TEXT,
         )
 
     def _render_debug_mode(self, telemetry: TelemetryFrame):
@@ -208,9 +218,10 @@ class HUDRenderer:
         for i, line in enumerate(debug_lines):
             self._draw_text(
                 line,
-                x=50, y=50 + i * 50,
+                x=50,
+                y=50 + i * 50,
                 size=self.FONT_SIZE_SMALL,
-                color=self.COLOR_TEXT
+                color=self.COLOR_TEXT,
             )
 
     def _render_alarms(self, alarms: List[str]):
@@ -221,9 +232,10 @@ class HUDRenderer:
         alarm_text = " | ".join(alarms).upper()
         self._draw_text(
             alarm_text,
-            x=self.DISPLAY_WIDTH // 2 - 200, y=10,
+            x=self.DISPLAY_WIDTH // 2 - 200,
+            y=10,
             size=self.FONT_SIZE_MEDIUM,
-            color=self.COLOR_ALARM
+            color=self.COLOR_ALARM,
         )
 
     def _draw_speedometer(self, speed_kmh: float):
@@ -236,13 +248,16 @@ class HUDRenderer:
         speed_text = f"{int(speed_kmh)} km/h"
         self._draw_text(
             speed_text,
-            x=center_x - 150, y=center_y - 50,
+            x=center_x - 150,
+            y=center_y - 50,
             size=self.FONT_SIZE_LARGE,
-            color=self.COLOR_PRIMARY
+            color=self.COLOR_PRIMARY,
         )
 
         # Speed bar (visual indicator)
-        bar_width = int((speed_kmh / 180.0) * (self.DISPLAY_WIDTH * 0.6))  # Max 180 km/h
+        bar_width = int(
+            (speed_kmh / 180.0) * (self.DISPLAY_WIDTH * 0.6)
+        )  # Max 180 km/h
         bar_width = min(bar_width, int(self.DISPLAY_WIDTH * 0.6))
 
         color = self.COLOR_PRIMARY
@@ -271,9 +286,10 @@ class HUDRenderer:
         depth_text = f"{depth_m:.1f} m"
         self._draw_text(
             depth_text,
-            x=center_x - 150, y=center_y - 100,
+            x=center_x - 150,
+            y=center_y - 100,
             size=self.FONT_SIZE_LARGE,
-            color=self.COLOR_PRIMARY
+            color=self.COLOR_PRIMARY,
         )
 
         # Depth bar (0-100m scale)
@@ -307,10 +323,7 @@ class HUDRenderer:
             color = self.COLOR_ALARM
 
         self._draw_text(
-            status_text,
-            x=50, y=50,
-            size=self.FONT_SIZE_MEDIUM,
-            color=color
+            status_text, x=50, y=50, size=self.FONT_SIZE_MEDIUM, color=color
         )
 
     def _draw_battery_status(self, voltage_v: float):
@@ -325,12 +338,15 @@ class HUDRenderer:
 
         self._draw_text(
             status_text,
-            x=self.DISPLAY_WIDTH - 300, y=50,
+            x=self.DISPLAY_WIDTH - 300,
+            y=50,
             size=self.FONT_SIZE_MEDIUM,
-            color=color
+            color=color,
         )
 
-    def _draw_text(self, text: str, x: int, y: int, size: int, color: Tuple[int, int, int]):
+    def _draw_text(
+        self, text: str, x: int, y: int, size: int, color: Tuple[int, int, int]
+    ):
         """
         Draw text on frame buffer (simplified placeholder).
 
@@ -353,7 +369,9 @@ class HUDRenderer:
             "mode": self.mode.value,
             "active": self._active,
             "brightness_percent": self.brightness_percent,
-            "brightness_cd_m2": int(self.DISPLAY_BRIGHTNESS_CD_M2 * self.brightness_percent / 100),
+            "brightness_cd_m2": int(
+                self.DISPLAY_BRIGHTNESS_CD_M2 * self.brightness_percent / 100
+            ),
             "frame_count": self._frame_count,
             "resolution": f"{self.DISPLAY_WIDTH}x{self.DISPLAY_HEIGHT}",
         }
