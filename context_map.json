@@ -1,0 +1,297 @@
+{
+ "dependents": {
+  "anomaly_detector.h": [
+   "firmware/src/main.c",
+   "tests/unit_tests/test_anomaly_detector.c"
+  ],
+  "at24c256c.h": [
+   "firmware/src/drivers/at24c256c.c",
+   "tests/unit_tests/test_memory_drivers.c"
+  ],
+  "bmp390.h": [
+   "firmware/src/drivers/bmp390.c",
+   "tests/unit_tests/test_sensor_drivers.c"
+  ],
+  "config.h": [
+   "firmware/src/data_fusion/anomaly_detector.c",
+   "firmware/src/data_fusion/kalman_filter.c",
+   "firmware/src/data_fusion/shot_assembler.c",
+   "firmware/src/data_fusion/thermal_analysis.c",
+   "firmware/src/data_fusion/thermal_robust.c",
+   "firmware/src/m4_core.c",
+   "firmware/src/main.c",
+   "firmware/src/storage/session_log.c",
+   "firmware/src/system_init.c",
+   "tests/unit_tests/test_session_log.c"
+  ],
+  "icm20689.h": [
+   "firmware/src/drivers/icm20689.c",
+   "tests/unit_tests/test_sensor_drivers.c"
+  ],
+  "kalman_filter.h": [
+   "firmware/src/data_fusion/kalman_filter.c",
+   "firmware/src/main.c",
+   "tests/unit_tests/test_kalman_filter.c"
+  ],
+  "m4_core.h": [
+   "firmware/src/main.c",
+   "tests/unit_tests/test_m4_ipc.c"
+  ],
+  "manufacturing_test.h": [
+   "firmware/src/manufacturing_test.c",
+   "tests/unit_tests/test_manufacturing_test.c",
+   "tests/unit_tests/test_manufacturing_test_defaults.c"
+  ],
+  "mcp9808.h": [
+   "firmware/src/drivers/mcp9808.c",
+   "tests/unit_tests/test_sensor_drivers.c"
+  ],
+  "session_log.h": [
+   "firmware/src/m4_core.c",
+   "firmware/src/main.c",
+   "firmware/src/storage/session_log.c",
+   "tests/unit_tests/test_session_log.c",
+   "tests/unit_tests/test_thermal_analysis.c"
+  ],
+  "session_manager.h": [
+   "firmware/src/session_manager.c",
+   "tests/unit_tests/test_session_manager.c"
+  ],
+  "shot_assembler.h": [
+   "firmware/src/data_fusion/shot_assembler.c",
+   "firmware/src/main.c",
+   "tests/unit_tests/test_shot_assembler.c"
+  ],
+  "stm32h7xx.h": [
+   "firmware/src/drivers/at24c256c.c",
+   "firmware/src/drivers/bmp390.c",
+   "firmware/src/drivers/icm20689.c",
+   "firmware/src/drivers/mcp9808.c",
+   "firmware/src/drivers/vl53l0x.c",
+   "firmware/src/drivers/w25q128jv.c",
+   "firmware/src/drivers/watchdog.c",
+   "firmware/src/manufacturing_test.c",
+   "firmware/src/session_manager.c"
+  ],
+  "test_framework.h": [
+   "tests/unit_tests/test_anomaly_detector.c",
+   "tests/unit_tests/test_drivers_defaults.c",
+   "tests/unit_tests/test_m4_ipc.c",
+   "tests/unit_tests/test_manufacturing_test.c",
+   "tests/unit_tests/test_manufacturing_test_defaults.c",
+   "tests/unit_tests/test_memory_drivers.c",
+   "tests/unit_tests/test_sensor_drivers.c",
+   "tests/unit_tests/test_session_log.c",
+   "tests/unit_tests/test_session_manager.c",
+   "tests/unit_tests/test_thermal_robust.c",
+   "tests/unit_tests/test_watchdog.c"
+  ],
+  "thermal_analysis.h": [
+   "firmware/src/data_fusion/thermal_analysis.c",
+   "firmware/src/data_fusion/thermal_robust.c",
+   "tests/unit_tests/test_thermal_analysis.c"
+  ],
+  "thermal_robust.h": [
+   "tests/unit_tests/test_thermal_robust.c"
+  ],
+  "types.h": [
+   "firmware/src/data_fusion/anomaly_detector.c",
+   "firmware/src/m4_core.c",
+   "firmware/src/main.c",
+   "firmware/inc/kalman_filter.h",
+   "firmware/inc/m4_core.h",
+   "firmware/inc/session_log.h",
+   "firmware/inc/shot_assembler.h",
+   "firmware/inc/thermal_analysis.h",
+   "firmware/inc/thermal_robust.h",
+   "tests/unit_tests/test_m4_ipc.c",
+   "tests/unit_tests/test_session_log.c",
+   "tests/unit_tests/test_thermal_robust.c"
+  ],
+  "vl53l0x.h": [
+   "firmware/src/drivers/vl53l0x.c",
+   "tests/unit_tests/test_sensor_drivers.c"
+  ],
+  "w25q128jv.h": [
+   "firmware/src/drivers/w25q128jv.c",
+   "tests/unit_tests/test_memory_drivers.c"
+  ],
+  "watchdog.h": [
+   "firmware/src/drivers/watchdog.c",
+   "tests/unit_tests/test_watchdog.c"
+  ]
+ },
+ "generated_by": "tools/gen_context_map.py",
+ "includes": {
+  "firmware/inc/anomaly_detector.h": [],
+  "firmware/inc/at24c256c.h": [],
+  "firmware/inc/bmp390.h": [],
+  "firmware/inc/config.h": [],
+  "firmware/inc/icm20689.h": [],
+  "firmware/inc/kalman_filter.h": [
+   "types.h"
+  ],
+  "firmware/inc/m4_core.h": [
+   "types.h"
+  ],
+  "firmware/inc/manufacturing_test.h": [],
+  "firmware/inc/mcp9808.h": [],
+  "firmware/inc/session_log.h": [
+   "types.h"
+  ],
+  "firmware/inc/session_manager.h": [],
+  "firmware/inc/shot_assembler.h": [
+   "types.h"
+  ],
+  "firmware/inc/thermal_analysis.h": [
+   "types.h"
+  ],
+  "firmware/inc/thermal_robust.h": [
+   "types.h"
+  ],
+  "firmware/inc/types.h": [],
+  "firmware/inc/vl53l0x.h": [],
+  "firmware/inc/w25q128jv.h": [],
+  "firmware/inc/watchdog.h": [],
+  "firmware/src/data_fusion/anomaly_detector.c": [
+   "config.h",
+   "types.h"
+  ],
+  "firmware/src/data_fusion/kalman_filter.c": [
+   "kalman_filter.h",
+   "config.h"
+  ],
+  "firmware/src/data_fusion/shot_assembler.c": [
+   "shot_assembler.h",
+   "config.h"
+  ],
+  "firmware/src/data_fusion/thermal_analysis.c": [
+   "thermal_analysis.h",
+   "config.h"
+  ],
+  "firmware/src/data_fusion/thermal_robust.c": [
+   "thermal_analysis.h",
+   "config.h"
+  ],
+  "firmware/src/drivers/at24c256c.c": [
+   "stm32h7xx.h",
+   "at24c256c.h"
+  ],
+  "firmware/src/drivers/bmp390.c": [
+   "stm32h7xx.h",
+   "bmp390.h"
+  ],
+  "firmware/src/drivers/icm20689.c": [
+   "stm32h7xx.h",
+   "icm20689.h"
+  ],
+  "firmware/src/drivers/mcp9808.c": [
+   "stm32h7xx.h",
+   "mcp9808.h"
+  ],
+  "firmware/src/drivers/vl53l0x.c": [
+   "stm32h7xx.h",
+   "vl53l0x.h"
+  ],
+  "firmware/src/drivers/w25q128jv.c": [
+   "stm32h7xx.h",
+   "w25q128jv.h"
+  ],
+  "firmware/src/drivers/watchdog.c": [
+   "stm32h7xx.h",
+   "watchdog.h"
+  ],
+  "firmware/src/m4_core.c": [
+   "config.h",
+   "types.h",
+   "session_log.h"
+  ],
+  "firmware/src/main.c": [
+   "config.h",
+   "types.h",
+   "kalman_filter.h",
+   "shot_assembler.h",
+   "session_log.h",
+   "m4_core.h",
+   "anomaly_detector.h"
+  ],
+  "firmware/src/manufacturing_test.c": [
+   "stm32h7xx.h",
+   "manufacturing_test.h"
+  ],
+  "firmware/src/session_manager.c": [
+   "stm32h7xx.h",
+   "session_manager.h"
+  ],
+  "firmware/src/storage/session_log.c": [
+   "session_log.h",
+   "config.h"
+  ],
+  "firmware/src/system_init.c": [
+   "config.h"
+  ],
+  "tests/inc/stm32h7xx.h": [],
+  "tests/inc/test_framework.h": [],
+  "tests/unit_tests/test_anomaly_detector.c": [
+   "test_framework.h",
+   "anomaly_detector.h"
+  ],
+  "tests/unit_tests/test_drivers_defaults.c": [
+   "test_framework.h"
+  ],
+  "tests/unit_tests/test_kalman_filter.c": [
+   "kalman_filter.h"
+  ],
+  "tests/unit_tests/test_m4_ipc.c": [
+   "test_framework.h",
+   "m4_core.h",
+   "types.h"
+  ],
+  "tests/unit_tests/test_manufacturing_test.c": [
+   "test_framework.h",
+   "manufacturing_test.h"
+  ],
+  "tests/unit_tests/test_manufacturing_test_defaults.c": [
+   "test_framework.h",
+   "manufacturing_test.h"
+  ],
+  "tests/unit_tests/test_memory_drivers.c": [
+   "test_framework.h",
+   "at24c256c.h",
+   "w25q128jv.h"
+  ],
+  "tests/unit_tests/test_sensor_drivers.c": [
+   "test_framework.h",
+   "icm20689.h",
+   "vl53l0x.h",
+   "mcp9808.h",
+   "bmp390.h"
+  ],
+  "tests/unit_tests/test_session_log.c": [
+   "test_framework.h",
+   "session_log.h",
+   "types.h",
+   "config.h"
+  ],
+  "tests/unit_tests/test_session_manager.c": [
+   "test_framework.h",
+   "session_manager.h"
+  ],
+  "tests/unit_tests/test_shot_assembler.c": [
+   "shot_assembler.h"
+  ],
+  "tests/unit_tests/test_thermal_analysis.c": [
+   "thermal_analysis.h",
+   "session_log.h"
+  ],
+  "tests/unit_tests/test_thermal_robust.c": [
+   "test_framework.h",
+   "types.h",
+   "thermal_robust.h"
+  ],
+  "tests/unit_tests/test_watchdog.c": [
+   "test_framework.h",
+   "watchdog.h"
+  ]
+ }
+}

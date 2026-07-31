@@ -1,0 +1,21 @@
+# Context filter for autonomous agent runs (rule set: AUTONOMY_PLAYBOOK P5)
+build/
+dist/
+*.o
+*.a
+*.elf
+*.bin
+*.hex
+*.gcda
+*.gcno
+*.gcov
+node_modules/
+__pycache__/
+*.pyc
+*.lock
+*.svg
+*.csv.gz
+tools/host_software/demo_*
+tools/host_software/session_*
+Testing/
+.git/
