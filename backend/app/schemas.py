@@ -2,11 +2,15 @@
 Request/Response schemas with validation.
 
 All API inputs go through Pydantic validation to catch invalid/malicious data early.
+
+Every numeric field below is bounded with Field(ge=..., le=...). Pydantic v2's
+core validation already rejects NaN and ±Infinity against those bounds (NaN
+fails both comparisons, ±Infinity fails whichever bound it exceeds), so no
+separate finite-value validator is needed on top of the range constraints.
 """
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 from typing import List, Optional
-import math
 
 
 class HUDRenderRequest(BaseModel):
@@ -62,14 +66,6 @@ class HUDRenderRequest(BaseModel):
         description="Salinity 0-40 PSU (seawater ~35)"
     )
 
-    @validator('speed_kmh', 'engine_temp_c', 'battery_voltage_v', 'engine_current_a',
-               'depth_m', 'water_temp_c', 'pressure_bar', 'salinity_ppt')
-    def validate_finite(cls, v):
-        """Reject NaN and infinite values."""
-        if math.isnan(v) or math.isinf(v):
-            raise ValueError(f'Value must be finite, got {v}')
-        return v
-
 
 class LaserPowerRequest(BaseModel):
     """Validated laser power request."""
@@ -78,12 +74,6 @@ class LaserPowerRequest(BaseModel):
         le=8.0,
         description="Laser power 0-8W (CNI MGL-III-532 max)"
     )
-
-    @validator('power_w')
-    def validate_finite(cls, v):
-        if math.isnan(v) or math.isinf(v):
-            raise ValueError(f'Power must be finite, got {v}')
-        return v
 
 
 class HUDBrightnessRequest(BaseModel):
@@ -94,18 +84,12 @@ class HUDBrightnessRequest(BaseModel):
         description="Display brightness 0-100%"
     )
 
-    @validator('percent')
-    def validate_finite(cls, v):
-        if math.isnan(v) or math.isinf(v):
-            raise ValueError(f'Brightness must be finite, got {v}')
-        return v
-
 
 class HUDModeRequest(BaseModel):
     """Validated HUD mode request."""
     mode: str = Field(
         ...,
-        regex="^(land|marine|debug|off)$",
+        pattern="^(land|marine|debug|off)$",
         description="Operating mode: land, marine, debug, or off"
     )
 
@@ -114,7 +98,7 @@ class RenderObjectRequest(BaseModel):
     """Validated 3D object render request."""
     object_type: str = Field(
         ...,
-        regex="^(sphere|cube|torus|mesh_custom)$",
+        pattern="^(sphere|cube|torus|mesh_custom)$",
         description="Object type: sphere, cube, torus, or mesh_custom"
     )
     scale: float = Field(
@@ -124,20 +108,15 @@ class RenderObjectRequest(BaseModel):
         description="Scale factor 0.1-2.0"
     )
 
-    @validator('scale')
-    def validate_finite(cls, v):
-        if math.isnan(v) or math.isinf(v):
-            raise ValueError(f'Scale must be finite, got {v}')
-        return v
-
 
 class BubbleStartRequest(BaseModel):
     """Validated bubble start request."""
     frequency_hz: int = Field(
         default=40000,
         ge=20000,
-        le=100000,
-        description="Bubble frequency 20-100 kHz (Steminc: 40 kHz)"
+        le=80000,
+        description="Bubble frequency 20-80 kHz (Steminc: 40 kHz; matches "
+                     "BubbleGenerator's own hardware bound)"
     )
     duty_cycle: float = Field(
         default=0.5,
@@ -146,16 +125,12 @@ class BubbleStartRequest(BaseModel):
         description="Duty cycle 0-1.0 (fraction of time active)"
     )
 
-    @validator('duty_cycle')
-    def validate_finite(cls, v):
-        if math.isnan(v) or math.isinf(v):
-            raise ValueError(f'Duty cycle must be finite, got {v}')
-        return v
-
 
 # Response schemas
 class HealthResponse(BaseModel):
     status: str = "healthy"
+    degraded: bool = False
+    degraded_subsystems: List[str] = []
 
 
 class SystemStatusResponse(BaseModel):
