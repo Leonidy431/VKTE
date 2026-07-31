@@ -75,19 +75,25 @@ def route_qspi():
          [(86.75, 88.85), (86.75, 90.6), (118.9, 90.6), (118.9, 71.635), (117.7, 71.635)])
 
     # D0: PD11 pin80 right -> B.Cu south-east corridor -> U6 pin5 (from below)
+    # Length-tuning detour (north pocket x112.5..115.8): +16.97mm so D0
+    # matches D2 (the longest data line) within the +/-0.5mm skew budget.
     poly("QSPI_D0", "F.Cu", W_QSPI,
          [(100.85, 83.25), (101.9, 83.25), (102.45, 83.8)])
     via("QSPI_D0", 102.45, 83.8)
     poly("QSPI_D0", "B.Cu", W_QSPI,
-         [(102.45, 83.8), (102.45, 85.6), (117.7, 85.6), (117.7, 74.6)])
+         [(102.45, 83.8), (102.45, 85.6), (112.5, 85.6), (112.5, 77.115),
+          (115.8, 77.115), (115.8, 85.6), (117.7, 85.6), (117.7, 74.6)])
     via("QSPI_D0", 117.7, 74.6)
     poly("QSPI_D0", "F.Cu", W_QSPI, [(117.7, 74.6), (117.7, 72.905)])
 
     # D1: PD12 pin81 right -> B.Cu west riser -> U6 pin2 (from west)
+    # Length-tuning detour (west excursion to x=90.05 between the power-via
+    # rows, band y71.0..74.3): +22.90mm to match D2.
     poly("QSPI_D1", "F.Cu", W_QSPI, [(100.85, 82.75), (103.4, 82.75)])
     via("QSPI_D1", 103.4, 82.75)
     poly("QSPI_D1", "B.Cu", W_QSPI,
-         [(103.4, 82.75), (101.5, 82.75), (101.5, 70.365), (108.5, 70.365)])
+         [(103.4, 82.75), (101.5, 82.75), (101.5, 74.3), (90.05, 74.3),
+          (90.05, 71.0), (101.5, 71.0), (101.5, 70.365), (108.5, 70.365)])
     via("QSPI_D1", 108.5, 70.365)
     poly("QSPI_D1", "F.Cu", W_QSPI, [(108.5, 70.365), (110.3, 70.365)])
 
@@ -100,11 +106,14 @@ def route_qspi():
     poly("QSPI_D2", "F.Cu", W_QSPI, [(111.9, 71.635), (110.3, 71.635)])
 
     # D3: PD13 pin82 right -> B.Cu mid corridor -> east riser -> U6 pin7
+    # Length-tuning detour (south dip x104.8..109.4 to y82.28): +16.96mm
+    # to match D2.
     poly("QSPI_D3", "F.Cu", W_QSPI,
          [(100.85, 82.25), (101.7, 82.25), (102.3, 81.65)])
     via("QSPI_D3", 102.3, 81.65)
     poly("QSPI_D3", "B.Cu", W_QSPI,
-         [(102.3, 81.65), (102.3, 73.8), (119.3, 73.8), (119.3, 70.365)])
+         [(102.3, 81.65), (102.3, 73.8), (104.8, 73.8), (104.8, 82.28),
+          (109.4, 82.28), (109.4, 73.8), (119.3, 73.8), (119.3, 70.365)])
     via("QSPI_D3", 119.3, 70.365)
     poly("QSPI_D3", "F.Cu", W_QSPI, [(119.3, 70.365), (117.7, 70.365)])
 
@@ -238,6 +247,123 @@ def route_via_drops():
     via("GND", 121, 59.7)
     poly("VCC_5V", "F.Cu", W_AUX, [(118, 54.5), (118, 53.3)])
     via("VCC_5V", 118, 53.3)
+
+
+# ===========================================================================
+# Signal routing (HLD work-order step 6): SPI1 -> U4/J4, I2C1 -> sensors/
+# EEPROM/pull-ups/J4, UART2 -> J2. USB_DP/DM deliberately deferred: a 90R
+# differential pair needs coupled-gap routing (KiCad interactive pair tool);
+# hand-splitting the pair here would violate the impedance netclass intent.
+# ===========================================================================
+
+def route_signals():
+    # ---- SPI1 escapes: bottom pads x<86.75 (west of the QSPI CLK bus) ----
+    poly("SPI1_CLK", "F.Cu", 0.2, [(83.25, 88.85), (83.25, 89.9), (82.75, 90.4)])
+    via("SPI1_CLK", 82.75, 90.4)
+    poly("SPI1_MISO", "F.Cu", 0.2, [(83.75, 88.85), (83.75, 90.9)])
+    via("SPI1_MISO", 83.75, 90.9)
+    poly("SPI1_MOSI", "F.Cu", 0.2, [(84.25, 88.85), (84.25, 89.9), (84.75, 90.4)])
+    via("SPI1_MOSI", 84.75, 90.4)
+    poly("SPI1_CS_IMU", "F.Cu", 0.2, [(85.75, 88.85), (85.75, 90.1)])
+    via("SPI1_CS_IMU", 85.75, 90.1)
+
+    # ---- SPI1 -> U4 (IMU) top pads via a via row north of the I2C trunks ----
+    poly("SPI1_CLK", "B.Cu", 0.2, [(82.75, 90.4), (82.75, 95.5), (89.25, 95.5)])
+    via("SPI1_CLK", 89.25, 95.5)
+    poly("SPI1_CLK", "F.Cu", 0.2, [(89.25, 95.5), (89.25, 99.05)])
+    poly("SPI1_MOSI", "B.Cu", 0.2, [(84.75, 90.4), (84.75, 94.9), (88.55, 94.9)])
+    via("SPI1_MOSI", 88.55, 94.9)
+    poly("SPI1_MOSI", "F.Cu", 0.2, [(88.55, 94.9), (88.55, 98.2), (88.75, 98.9), (88.75, 99.05)])
+    poly("SPI1_CS_IMU", "B.Cu", 0.2,
+         [(85.75, 90.1), (85.75, 94.3), (89.95, 94.3), (89.95, 94.9)])
+    via("SPI1_CS_IMU", 89.95, 94.9)
+    poly("SPI1_CS_IMU", "F.Cu", 0.2, [(89.95, 94.9), (89.95, 98.2), (89.75, 98.9), (89.75, 99.05)])
+
+    # ---- SPI1 -> J4 sensor connector ----
+    # CS -> J4 pin8: F.Cu lane y=94.9 (north of the I2C trunks), east
+    # corridor x=113.2 between J4 pad columns, entering pin 8 from south.
+    poly("SPI1_CS_IMU", "F.Cu", 0.2,
+         [(89.95, 94.9), (113.2, 94.9), (113.2, 104.5), (112, 104.5), (112, 101.27)])
+    # MISO -> J4 pin6: B.Cu at y=89.5 (north of the escape via row), with an
+    # F.Cu hop x112.9..115.9 across the I2C U7 risers, then south past J4
+    # and into pin 6 from below.
+    poly("SPI1_MISO", "B.Cu", 0.2, [(83.75, 90.9), (83.75, 89.5), (112.9, 89.5)])
+    via("SPI1_MISO", 112.9, 89.5)
+    poly("SPI1_MISO", "F.Cu", 0.2, [(112.9, 89.5), (115.9, 89.5)])
+    via("SPI1_MISO", 115.9, 89.5)
+    poly("SPI1_MISO", "B.Cu", 0.2,
+         [(115.9, 89.5), (115.9, 103.2), (109.46, 103.2), (109.46, 101.27)])
+    # CLK -> J4 pin5 and MOSI -> J4 pin7 are deferred to the KiCad
+    # interactive session together with the USB 90R pair: their risers pin5
+    # (x=109.46) / pin7 (x=112) cannot cross the U4 branch lanes without a
+    # lane order that the fixed J4 pin sequence forbids; they need either a
+    # push-and-shove pass or two extra hop vias placed with DRC assist.
+
+    # ---- I2C1: north escape (west of the QSPI CS bus), B.Cu south trunks:
+    #      SCL trunk y=96.1 (north), SDA trunk y=96.7 (south).
+    poly("I2C1_SCL", "F.Cu", 0.25, [(83.75, 67.15), (83.75, 62.45)])
+    via("I2C1_SCL", 83.75, 62.45)
+    poly("I2C1_SDA", "F.Cu", 0.25, [(83.25, 67.15), (83.25, 64.0), (83.05, 63.15)])
+    via("I2C1_SDA", 83.05, 63.15)
+    # SCL descends far west at x=76.4 (clears the D2 B.Cu corridor).
+    poly("I2C1_SCL", "B.Cu", 0.25,
+         [(83.75, 62.45), (76.4, 62.45), (76.4, 96.1), (114.6, 96.1)])
+    # SDA descends at x=66.2 after an F.Cu hop across the SCL descent --
+    # the single planned crossing of the two-net tree, done on F where the
+    # north-west quadrant is empty.
+    poly("I2C1_SDA", "B.Cu", 0.25, [(83.05, 63.15), (77.3, 63.15)])
+    via("I2C1_SDA", 77.3, 63.15)
+    poly("I2C1_SDA", "F.Cu", 0.25, [(77.3, 63.15), (66.2, 63.15)])
+    via("I2C1_SDA", 66.2, 63.15)
+    poly("I2C1_SDA", "B.Cu", 0.25, [(66.2, 63.15), (66.2, 96.7), (115.2, 96.7)])
+
+    # SCL west arm crosses the SDA descent with its own F.Cu hop.
+    poly("I2C1_SCL", "B.Cu", 0.25, [(67.0, 96.1), (76.4, 96.1)])
+    via("I2C1_SCL", 67.0, 96.1)
+    poly("I2C1_SCL", "F.Cu", 0.25, [(67.0, 96.1), (65.4, 96.1)])
+    via("I2C1_SCL", 65.4, 96.1)
+    poly("I2C1_SCL", "B.Cu", 0.25, [(65.4, 96.1), (62.6, 96.1), (62.6, 99.4)])
+    via("I2C1_SCL", 62.6, 99.4)
+    poly("I2C1_SCL", "F.Cu", 0.25, [(62.6, 99.4), (62.6, 100.2)])
+
+    # SCL south-side branches drop through trunk vias and finish on F.Cu
+    # (south of the trunks nothing on F conflicts): U10 pin2, J4 pin3.
+    via("I2C1_SCL", 92.9, 96.1)
+    poly("I2C1_SCL", "F.Cu", 0.25, [(92.9, 96.1), (92.9, 100.675), (94.3, 100.675)])
+    via("I2C1_SCL", 106.92, 96.1)
+    poly("I2C1_SCL", "F.Cu", 0.25, [(106.92, 96.1), (106.92, 98.73)])
+    # R2 pull-up: north branch off the SCL trunk (no SDA structure north).
+    poly("I2C1_SCL", "B.Cu", 0.25, [(99.9, 96.1), (99.9, 93.5)])
+    via("I2C1_SCL", 99.9, 93.5)
+    poly("I2C1_SCL", "F.Cu", 0.25, [(99.9, 93.5), (99.9, 92.5), (99.51, 92.5)])
+    # U7 EEPROM SCL: east riser past the SDA trunk end.
+    poly("I2C1_SCL", "B.Cu", 0.25, [(114.6, 96.1), (114.6, 87.27)])
+    via("I2C1_SCL", 114.6, 87.27)
+    poly("I2C1_SCL", "F.Cu", 0.25, [(114.6, 87.27), (116.7, 87.27)])
+
+    # SDA branches (all south of the SDA trunk or east of both trunks):
+    poly("I2C1_SDA", "B.Cu", 0.25, [(63.4, 96.7), (66.2, 96.7)])
+    poly("I2C1_SDA", "B.Cu", 0.25, [(63.4, 96.7), (63.4, 99.4)])
+    via("I2C1_SDA", 63.4, 99.4)
+    poly("I2C1_SDA", "F.Cu", 0.25, [(63.4, 99.4), (63.4, 100.2)])
+    poly("I2C1_SDA", "B.Cu", 0.25, [(93.9, 96.7), (93.9, 99.2)])
+    via("I2C1_SDA", 93.9, 99.2)
+    poly("I2C1_SDA", "F.Cu", 0.25, [(93.9, 99.2), (93.9, 100.025), (94.3, 100.025)])
+    poly("I2C1_SDA", "B.Cu", 0.25, [(105.7, 96.7), (105.7, 101.27), (106.92, 101.27)])
+    poly("I2C1_SDA", "B.Cu", 0.25, [(115.2, 96.7), (115.2, 87.905)])
+    via("I2C1_SDA", 115.2, 87.905)
+    poly("I2C1_SDA", "F.Cu", 0.25, [(115.2, 87.905), (116.7, 87.905)])
+    # R3 pull-up joins on F.Cu via J4 pin 4: east loop through x=118.3,
+    # clearing the CS lane corridor (ends x=113.2) and the J4 pad columns.
+    poly("I2C1_SDA", "F.Cu", 0.25,
+         [(102.01, 92.5), (118.3, 92.5), (118.3, 105.3), (106.92, 105.3), (106.92, 101.27)])
+
+    # ---- UART2 -> J2 debug header (west, F.Cu) ----
+    poly("UART2_TX", "F.Cu", 0.2,
+         [(79.15, 86.75), (77.9, 86.75), (77.9, 85.9), (58.0, 85.9),
+          (58.0, 79.46), (55.5, 79.46)])
+    poly("UART2_RX", "F.Cu", 0.2,
+         [(81.25, 88.85), (81.25, 90.0), (57.2, 90.0), (57.2, 82.0), (55.5, 82.0)])
 
 
 # ===========================================================================
@@ -402,6 +528,7 @@ def main():
     route_qspi()
     route_power_fanout()
     route_via_drops()
+    route_signals()
 
     errors = audit()
     if errors:
