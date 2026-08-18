@@ -1,104 +1,90 @@
 /**
  * @file system_init.c
- * @brief STM32H745 System Initialization
+ * @brief STM32H745 System Initialization Weak Symbols & Fault Handlers
+ * @version 1.0
  *
- * Handles:
- * - PLL configuration
- * - Clock tree setup
- * - Peripheral enable
- * - Inter-core synchronization
+ * Provides weak symbol stubs for HAL integration and fault handlers.
+ * Application code can override these to implement HAL-specific initialization.
  */
 
-#include "config.h"
+#include <stdint.h>
+#include <stdio.h>
+
+/* Forward declarations from startup_sequence.c */
+extern int system_init_status;
+extern void SystemInit(void);
+
+/* ============ HAL Initialization Weak Symbols ============ */
 
 /**
- * System clock initialization for STM32H745
- * Sets up:
- * - PLL1: M7 @ 480 MHz
- * - PLL2: M4 @ 240 MHz
- * - Clock distribution
+ * MSP (Microcontroller Support Package) initialization for peripherals.
+ * Called by HAL_Init() before peripheral initialization.
+ * Weak: override in application to configure GPIO, clocks, interrupts.
  */
-void system_clock_init(void)
-{
-    /*
-     * PLL Configuration:
-     * HSRC = 25 MHz
-     * PLL1: 25 MHz * 48 / 2.5 = 480 MHz (M7)
-     * PLL2: 25 MHz * 24 / 2.5 = 240 MHz (M4)
-     *
-     * (Implementation requires STM32H7 HAL or direct register manipulation)
-     */
+__attribute__((weak))
+void HAL_MspInit(void) {
+    printf("[HAL] MspInit (stub)\n");
 }
 
 /**
- * Enable M4 core from M7
- * Uses TAMP register to synchronize core startup
+ * MSP deinitialization for peripherals.
+ * Called by HAL_DeInit() during system shutdown.
+ * Weak: override in application to reverse GPIO/clock configuration.
  */
-void m4_core_enable(void)
-{
-    /*
-     * Set TAMP register bit to release M4 core reset
-     * Then synchronize via mailbox/event signaling
-     */
+__attribute__((weak))
+void HAL_MspDeInit(void) {
+    printf("[HAL] MspDeInit (stub)\n");
 }
 
-/**
- * Initialize inter-core communication (IPC)
- */
-void ipc_init(void)
-{
-    /*
-     * Setup ring buffers in shared AXI-SRAM
-     * Configure mailbox interrupts
-     * Initialize synchronization primitives
-     */
+/* ============ Fault Handlers ============ */
+
+void HardFault_Handler(void) {
+    printf("[FAULT] HardFault: System halted\n");
+    while (1) __asm__ volatile ("nop");
 }
 
-/**
- * Enable and configure required peripherals
- */
-void peripherals_init(void)
-{
-    /* Enable clocks for:
-     * - SPI1, SPI4 (IMU, Flash)
-     * - I2C1 (LRF, BME280)
-     * - USART2 (Debug UART)
-     * - USB OTG
-     * - ADC (Thermistor)
-     * - Timers (SysTick, TIM2)
-     */
+void MemManage_Handler(void) {
+    printf("[FAULT] MemManage: Memory access violation\n");
+    while (1) __asm__ volatile ("nop");
 }
 
-/**
- * Configure GPIO pins
- */
-void gpio_init(void)
-{
-    /* Configure:
-     * - IMU interrupt pins
-     * - UART pins (TX/RX)
-     * - SPI pins (MOSI/MISO/SCK/CS)
-     * - I2C pins (SDA/SCL)
-     * - LED status pins
-     */
+void BusFault_Handler(void) {
+    printf("[FAULT] BusFault: Bus protocol error\n");
+    while (1) __asm__ volatile ("nop");
 }
 
-/**
- * Initialize watchdog timer
- */
-void watchdog_init(void)
-{
-    /*
-     * Configure independent watchdog (IWDG)
-     * Timeout: 2 seconds
-     * Requires refresh every 1 second in main loop
-     */
+void UsageFault_Handler(void) {
+    printf("[FAULT] UsageFault: Invalid instruction or operation\n");
+    while (1) __asm__ volatile ("nop");
 }
 
-/**
- * Stub placeholder for future implementation
- */
-void system_init_complete(void)
-{
-    /* Called after all subsystems are initialized */
+void NMI_Handler(void) {
+    printf("[NMI] Non-Maskable Interrupt\n");
+    while (1) __asm__ volatile ("nop");
+}
+
+__attribute__((weak))
+void SVC_Handler(void) {
+    printf("[SVC] Supervisor call (stub)\n");
+}
+
+__attribute__((weak))
+void PendSV_Handler(void) {
+    printf("[PendSV] Pendable service call (stub)\n");
+}
+
+__attribute__((weak))
+void SysTick_Handler(void) {
+    static uint32_t tick_count = 0;
+    tick_count++;
+}
+
+/* ============ Initialization Status ============ */
+
+int system_get_init_status(void) {
+    return system_init_status;
+}
+
+void system_reset_init_status(void) {
+    system_init_status = 0;
 }
