@@ -104,6 +104,14 @@ if(BUILD_TESTS AND NOT CMAKE_SYSTEM_NAME MATCHES "Generic")
     target_compile_definitions(test_ipc_ring_buffer PRIVATE __INCLUDE_TEST_MOCK__)
     target_link_libraries(test_ipc_ring_buffer m)
 
+    # Test: Latency Monitor (DWT cycle counter profiling)
+    add_executable(test_latency_monitor
+        tests/unit_tests/test_latency_monitor.c
+        firmware/src/latency_monitor.c
+    )
+    target_compile_definitions(test_latency_monitor PRIVATE __INCLUDE_TEST_MOCK__)
+    target_link_libraries(test_latency_monitor m)
+
     # Test: Sensor drivers (ICM-20689, VL53L0X, MCP9808, BMP390) via
     # register-level simulators overriding each driver's weak I/O hooks
     add_executable(test_sensor_drivers
@@ -183,6 +191,7 @@ if(BUILD_TESTS AND NOT CMAKE_SYSTEM_NAME MATCHES "Generic")
     add_test(NAME SessionLog COMMAND test_session_log)
     add_test(NAME M4IpcRing COMMAND test_m4_ipc)
     add_test(NAME IpcRingBuffer COMMAND test_ipc_ring_buffer)
+    add_test(NAME LatencyMonitor COMMAND test_latency_monitor)
     add_test(NAME SensorDrivers COMMAND test_sensor_drivers)
     add_test(NAME MemoryDrivers COMMAND test_memory_drivers)
     add_test(NAME Watchdog COMMAND test_watchdog)
@@ -206,6 +215,7 @@ if(BUILD_FIRMWARE AND CMAKE_SYSTEM_NAME MATCHES "Generic")
         firmware/src/power_management.c
         firmware/src/m4_core.c
         firmware/src/ipc_ring_buffer.c
+        firmware/src/latency_monitor.c
         firmware/src/data_fusion/kalman_filter.c
         firmware/src/data_fusion/thermal_analysis.c
         firmware/src/data_fusion/thermal_robust.c
