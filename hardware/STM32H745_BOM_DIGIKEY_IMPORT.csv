@@ -1,0 +1,31 @@
+Digi-Key Part Number,Quantity,Reference Designator,Value,Datasheet
+497-STM32H745ZIT6-ND,1,U1,STM32H745ZIT6,https://www.st.com/resource/en/datasheet/stm32h745xi.pdf
+595-TPS62133ADBVT-ND,1,U2,TPS62133ADBVT,https://www.ti.com/lit/ds/symlink/tps62133a.pdf
+NCP1117ST33T3GOSCT-ND,1,U3,NCP1117ST33T3G,https://www.onsemi.com/pdf/datasheet/ncp1117.pdf
+NCP1117ST18T3GOSCT-ND,1,U4,NCP1117ST18T3G,https://www.onsemi.com/pdf/datasheet/ncp1117.pdf
+ICM-20689-ND,1,U5,ICM-20689,https://invensense.tdk.com/wp-content/uploads/2019/06/DS-000188-ICM-20689-v2.1.pdf
+497-VL53L0X-SLTM4-ND,1,U6,VL53L0X,https://www.st.com/resource/en/datasheet/vl53l0x.pdf
+W25Q128JVSNIQ-ND,1,U7,W25Q128JV,https://www.winbond.com/resource-files/qspi_public_spec_v1.8.pdf
+AT24C256C-PU-ND,1,U8,AT24C256C,https://ww1.microchip.com/downloads/en/DeviceDoc/doc0670.pdf
+336-CP2102N-A01-GQFR-ND,1,U9,CP2102N,https://www.silabs.com/documents/public/data-sheets/cp2102n-datasheet.pdf
+BT121-A-F512-GAZF-ND,1,U10,BT121-A,https://www.qorvo.com/products/d/da001050
+MCP9808-M/MS-ND,1,U11,MCP9808,https://ww1.microchip.com/downloads/en/DeviceDoc/25095A.pdf
+BMP390-ASAHI-KASEI-ND,1,U12,BMP390,https://www.bosch-sensortec.com/bst/products/all_products/bmp390
+SIT1533AI-82-33E-40.0-80-ND,1,X1,SiT1533 8MHz,https://www.sitime.com/products/timing-devices/sit1533
+GRM188R61A104KA01L-ND,20,C1,100nF,https://www.murata.com/~/media/webrenewal/catalog/ceramiccapacitors/mlcc/c02e.ashx?la=en-us
+GRM31CR61A106KE19L-ND,8,C2,10µF,https://www.murata.com/~/media/webrenewal/catalog/ceramiccapacitors/mlcc/c02e.ashx?la=en-us
+GRM31CR61A105KE19L-ND,4,C3,1µF,https://www.murata.com/~/media/webrenewal/catalog/ceramiccapacitors/mlcc/c02e.ashx?la=en-us
+GRM188R71A220KA01L-ND,2,C4,22pF,https://www.murata.com/~/media/webrenewal/catalog/ceramiccapacitors/mlcc/c02e.ashx?la=en-us
+CRCW060310K0FKED-ND,4,R1,10kΩ,https://www.vishay.com/docs/20069/crcwhpe3.pdf
+CRCW06034700FKED-ND,2,R2,4.7kΩ,https://www.vishay.com/docs/20069/crcwhpe3.pdf
+CRCW060350R0FKED-ND,6,R3,50Ω,https://www.vishay.com/docs/20069/crcwhpe3.pdf
+WSLP2512R0100FEA-ND,1,R4,10mΩ,https://www.vishay.com/docs/91000/wsl.pdf
+CDRH127R-4R7MC-ND,1,L1,4.7µH,https://www.sumida.com/en/common/lib/pdf/spec_pdf/CDRH127R.pdf
+1N5819WS-ND,1,D1,1N5819,https://www.vishay.com/docs/88525/1n5819.pdf
+BLM18KG471SN1D-ND,1,FB1,Ferrite Bead,https://www.murata.com/en-us/products/productdetail?partno=BLM18KG471SN1D
+PTS645SM43SMTR92_ND,2,SW1,Tactile Switch,https://www.ckswitches.com/media/1471/pts645.pdf
+UX90-MB-5ST-EMI-ND,1,J1,USB Mini-B,https://www.amphenol-icc.com/products/usb/usb-connectors/ux90-mb/
+20021121-00010C4LF-ND,1,J2,UART Header,https://www.amphenol.com/
+FTSH-105-01-F-DV-K-ND,1,J3,SWD Connector,https://www.samtec.com/pdf/ftsh.pdf
+B14B-GH-SM4-P-0.8-ND,1,J4,Sensor Connector,https://www.jst.com/products/detail/B14B-GH-SM4-P-0.8
+5001K-ND,8,TP1,Test Point,https://www.keystonelectronics.com/pdf/5000.pdf

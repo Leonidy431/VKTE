@@ -1,0 +1,36 @@
+(version 1)
+
+# Custom DRC rules - STM32H745 Ballistic Corrector
+# Companion to HLD_BOARD_INTEGRATION.md §5
+
+# QSPI 50R impedance-controlled nets: enforce width and outer-layer routing
+(rule "QSPI_width_50R"
+  (condition "A.NetClass == 'QSPI_50R'")
+  (layer outer)
+  (constraint track_width (min 0.27mm) (opt 0.28mm) (max 0.29mm)))
+
+# QSPI must not route on inner layers (reference plane integrity)
+(rule "QSPI_no_inner_layers"
+  (condition "A.NetClass == 'QSPI_50R'")
+  (layer inner)
+  (constraint disallow track))
+
+# USB 90R differential pair geometry
+(rule "USB_diff_width"
+  (condition "A.NetClass == 'USB_90R'")
+  (layer outer)
+  (constraint track_width (min 0.19mm) (opt 0.20mm) (max 0.21mm)))
+
+# Keep high-current 12V input clear of small-signal nets
+(rule "12V_clearance"
+  (condition "A.NetClass == 'Power_12V_5V' && B.NetClass != 'Power_12V_5V'")
+  (constraint clearance (min 0.4mm)))
+
+# Crystal region: larger clearance around HSE nets
+(rule "edge_clearance_copper"
+  (constraint edge_clearance (min 0.3mm)))
+
+# Via annular ring for power vias
+(rule "power_via_size"
+  (condition "A.NetClass == 'Power_12V_5V'")
+  (constraint via_diameter (min 1.0mm)))

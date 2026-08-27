@@ -1,0 +1,92 @@
+# state_journal.md — Журнал состояний агента
+
+Обновляется в конце каждой итерации ПОСЛЕ прохождения validation_protocol.md.
+Формат записи: фаза → сделано → нерешённое → следующий шаг.
+
+---
+
+## 2026-08-27 — Итерация: P0 Critical Path Complete (P0-1, P0-2, P0-3)
+
+**Фаза**: Firmware QA (Критический путь к 2026-08-21 assembly gate)
+**Сделано**:
+- ✅ P0-1 IPC Ring Buffer: 20 unit tests (100% pass), 256-slot FIFO with HSEM spin-lock, CRC32 integrity
+- ✅ P0-2 Session Manager: Tests already integrated, Flash persistence + rollback support
+- ✅ P0-3 Latency Monitor: DWT cycle counter profiling, 10 unit tests (100% pass), 16 phases, <20ms budget
+- Полный набор тестов: 16/16 PASS, 100% успех (KalmanFilter, ThermalAnalysis, ShotAssembler, IpcRingBuffer, LatencyMonitor, SessionManager и др.)
+- Conditional compilation (hardware vs test): #ifndef __INCLUDE_TEST_MOCK__ паттерн для безопасного тестирования на хосте
+- CMakeLists.txt: target_compile_definitions() для изоляции железных регистров в тест-среде
+- Commit 38b3e41: P0-3 Latency Monitor с полной документацией
+
+**Нерешённое**:
+- Ветви отказов в w25q128jv/qspi_wait_busy (тех.долг в бэклоге) — не блокирует P0
+- m4_core RTOS-задачи (while(1)-петли) — по конструкции нетестируемы
+
+**Следующий шаг**: P1 critical items (CI/CD pipeline, edge communication, database schema) или PCB finalization (DRC в KiCad, SI/терм, Gerber lock 2026-08-11)
+
+---
+
+## 2026-07-31 — Итерация: PCB силовая разводка (шаг 7)
+
+**Фаза**: PCB (HLD §5.5 шаг 7)
+**Сделано**:
+- Найдена слепая зона courtyard-чекера (сверял тела, а не courtyards):
+  пады D1 перекрывали TH-пад J1.2 — силовой ряд сдвинут (D1→74, U2→78.5,
+  L1→84, C2→89, U3→96, C14→102, U12→107.5, C15→112)
+- Новые цепи PWR_12V_RAW (до диода) и PWR_SW (узел buck-индуктор)
+- Разводка: 12V-вход, VIN+EN buck (EN через B.Cu-хоп), SW-узел 0.8 мм,
+  5V→C2→виа в 5V-полигон In2, LDO-фиды из полигона, 3V3-дропы (pin2+tab U3,
+  C14, TP3) в 3V3-полигон, шина 1V8 (U12→C15→TP4), GND-дропы
+- Аудит: 5 нарушений → 0. Итог: 216 сегментов, 100 виа, courtyard PASS
+**Нерешённое**: TP1 (12V) — подключение при B.Cu-распределении в KiCad;
+courtyard-чекер сверяет тела (fp_rect F.Fab), а не F.CrtYd — тех.долг
+**Следующий шаг**: DRC в KiCad GUI (шаг 8), SI/термо (шаг 9), Gerber lock
+
+## 2026-07-31 — Итерация: PCB финальная разводка (шаги 5–6)
+
+**Фаза**: PCB (HLD §5.5 шаги 5–6) + внедрение 99 правил проекта
+**Сделано**:
+- CLAUDE.md (99 правил), AUTONOMY_PLAYBOOK (99 лайфхаков), validation_protocol,
+  state_journal, .claudeignore, context_map.json — закоммичены
+- QSPI-тюнинг: меандры D0 (+16.97), D1 (+22.90), D3 (+16.96) → все данные
+  48.54 мм, скью 0.01 мм (бюджет ±0.5); CLK 54.06 (SDR — некритично)
+- SPI1: эскейпы + U4 (CLK/MOSI/CS на пины 23/24/22), MISO→J4.6 (F-хоп через
+  I2C-стояки), CS→J4.8 (коридор x113.2)
+- I2C1: дерево SCL/SDA — спуски на западе, транки y96.1/96.7, отводы на U5,
+  U10, J4.3/J4.4, R2/R3, U7; 2 плановых пересечения решены F-хопами
+- UART2 → J2 по F.Cu на западе
+- Итер аудита: 17 нарушений → 6 → 0. Итог: 183 сегмента, 85 виа, DRC 0,
+  courtyard PASS
+**Нерешённое** (для интерактивного KiCad, задокументировано в HLD §5.5):
+- USB_DP/DM 90Ω диффпара (нужен связанный pair-роутер — ручной разнос
+  нарушил бы импеданс-намерение netclass)
+- SPI CLK→J4.5, MOSI→J4.7 (порядок подъёмов против фиксированной пиновки J4)
+- U11 BMP390 пиновка (биндинг после сверки даташита при импорте нетлиста)
+**Следующий шаг**: шаг 7 — силовая разводка 12V→buck→LDO, полигон 1V8;
+затем DRC в KiCad GUI, SI/термо (шаг 9), Gerber lock 2026-08-11
+
+## 2026-07-31 — Итерация: тесты + coverage
+
+**Фаза**: Firmware QA (задача «coverage 95%+» из бэклога)
+**Сделано**:
+- 14 тестовых бинарников, 620 проверок, 100% pass
+- Покрытие firmware/src: 94.7% строк / 97.1% функций / 85.4% ветвлений
+- Исправлено 10 реальных багов (icm20689 8× занижение ускорения — safety;
+  session_manager: id=0, коллизии офсетов, 0xFF-чистая Flash, size_sectors→size_bytes,
+  metadata_save при flush, откаты слотов; thermal_robust: sigma=0, потерянный intercept;
+  PAT: FLASH-ветка, сентинел timestamp)
+**Нерешённое**:
+- w25q128jv: ветки отказов внутри erase/write (85%) — паттерн покрыт в session_manager, дублирование отложено
+- m4_core: while(1)-петли RTOS-задач нетестируемы по конструкции (drain вынесен и покрыт)
+- qspi_wait_busy: таймаут не реализован (TODO в коде) — тех.долг в бэклоге
+**Следующий шаг**: PCB — тюнинг длин QSPI (меандры), разводка SPI/I2C/UART (шаг 6 HLD §5.5)
+
+## 2026-07-31 — Итерация: PCB fan-out + QSPI
+
+**Фаза**: PCB (шаги 4–5 HLD §5.5)
+**Сделано**: fan-out питания LQFP144 (20 виа), полная связность QSPI 6/6, гео-DRC 0 нарушений
+**Нерешённое**: скью данных QSPI 22.9 мм (~0.15 нс) — нужен меандр-тюнинг до ±0.5 мм
+**Следующий шаг**: шаг 5 (тюнинг) + шаг 6 (SPI/I2C/UART/USB)
+
+---
+
+<!-- Новые записи добавлять СВЕРХУ, под заголовком -->

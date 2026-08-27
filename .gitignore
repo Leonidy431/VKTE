@@ -1,0 +1,37 @@
+# Build artifacts
+build/
+dist/
+*.o
+*.a
+*.so
+*.elf
+*.bin
+*.hex
+
+# Test data and runtime outputs
+tools/host_software/demo_*.csv
+tools/host_software/demo_*.json
+tools/host_software/session_*.csv
+tools/host_software/session_*.json
+tools/host_software/__pycache__/
+*.pyc
+*.pyo
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# CMake
+CMakeFiles/
+cmake_install.cmake
+CMakeCache.txt
+Makefile
+
+# Temporary files
+*.tmp
+*.bak
+*.orig
