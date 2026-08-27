@@ -5,6 +5,26 @@
 
 ---
 
+## 2026-08-27 — Итерация: P0 Critical Path Complete (P0-1, P0-2, P0-3)
+
+**Фаза**: Firmware QA (Критический путь к 2026-08-21 assembly gate)
+**Сделано**:
+- ✅ P0-1 IPC Ring Buffer: 20 unit tests (100% pass), 256-slot FIFO with HSEM spin-lock, CRC32 integrity
+- ✅ P0-2 Session Manager: Tests already integrated, Flash persistence + rollback support
+- ✅ P0-3 Latency Monitor: DWT cycle counter profiling, 10 unit tests (100% pass), 16 phases, <20ms budget
+- Полный набор тестов: 16/16 PASS, 100% успех (KalmanFilter, ThermalAnalysis, ShotAssembler, IpcRingBuffer, LatencyMonitor, SessionManager и др.)
+- Conditional compilation (hardware vs test): #ifndef __INCLUDE_TEST_MOCK__ паттерн для безопасного тестирования на хосте
+- CMakeLists.txt: target_compile_definitions() для изоляции железных регистров в тест-среде
+- Commit 38b3e41: P0-3 Latency Monitor с полной документацией
+
+**Нерешённое**:
+- Ветви отказов в w25q128jv/qspi_wait_busy (тех.долг в бэклоге) — не блокирует P0
+- m4_core RTOS-задачи (while(1)-петли) — по конструкции нетестируемы
+
+**Следующий шаг**: P1 critical items (CI/CD pipeline, edge communication, database schema) или PCB finalization (DRC в KiCad, SI/терм, Gerber lock 2026-08-11)
+
+---
+
 ## 2026-07-31 — Итерация: PCB силовая разводка (шаг 7)
 
 **Фаза**: PCB (HLD §5.5 шаг 7)
